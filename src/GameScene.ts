@@ -15,8 +15,17 @@ export class GameScene extends Phaser.Scene {
     private readonly CHOICE_HEIGHT = 80;
     private readonly CHOICE_SPACE = 20;
 
+    private readonly UNIT_SPEC = {
+        "😺" : { tier: 1, desc: "Tier1 Cat", price: { "💰": 10 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
+        "😹" : { tier: 2, desc: "Tier2 Cat", price: { "💰": 200 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
+        "😼" : { tier: 3, desc: "Tier3 Cat", price: { "💰": 4000 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
+        "👌" : { tier: 1, desc: "Tier1 Finger", price: { "💰": 10 }, type: "CONVERT", meta1: {"💰": 100 }, meta2: {"💰": 200 }, tick: 100 },
+        "🤞" : { tier: 2, desc: "Tier2 Finger", price: { "💰": 20 }, type: "CONVERT", meta1: {"💰": 1000 }, meta2: {"💰": 2000 }, tick: 200 },
+        "🤟" : { tier: 3, desc: "Tier3 Finger", price: { "💰": 30 }, type: "CONVERT", meta1: {"💰": 10000 }, meta2: {"💰": 20000 }, tick: 300 },
+    };
+
     private map: number[][]; // マップデータ（0: 空白、1: 道）
-    private textMap: Phaser.GameObjects.Text[][]; // テキストマップデータ
+    private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceTexts: Phaser.GameObjects.Text[];
@@ -27,9 +36,15 @@ export class GameScene extends Phaser.Scene {
     private confirmText: Phaser.GameObjects.Text;
     private confirmOK: boolean = false;
 
+    private wallet = { "💰": 100 };
     private mapX = -1;
     private mapY = -1;
     private choice = 0;
+    private choices = {
+        1: "😺",
+        2: "😼",
+        3: "👌"
+    };
 
     constructor() {
         super("game");
@@ -46,9 +61,10 @@ export class GameScene extends Phaser.Scene {
             //this.click(pointer);
         });
 
-        // ステータスの初期化
-        this.statusText = this.add.text(10, 10, "Time: " + this.tick).setFontSize(20).setFill('#FFF');
+        // ステータス表示用テキストの初期化
+        this.statusText = this.add.text(10, 10, "Time: " + this.tick).setFontSize(20).setFill('#fff');
 
+        // 配置ボタンの初期化
         this.confirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999');
         this.confirmText.setInteractive({ useHandCursor: true });
         this.confirmText.setOrigin(0.5);
@@ -56,6 +72,7 @@ export class GameScene extends Phaser.Scene {
             console.log("test");
             this.clickConfirm();
         });
+
         // タイマーイベントを設定する
         const timer = this.time.addEvent({
             delay: 500, // 1秒ごとに更新
@@ -64,7 +81,7 @@ export class GameScene extends Phaser.Scene {
             loop: true // 繰り返し実行
         });
 
-        // 描画用オブジェクトを作成する
+        // 右側、説明表示用オブジェクトを作成する
         this.selectedGraphics = this.add.graphics();
         this.selectedText = this.add.text(10, 10, " ").setFontSize(20).setFill('#fff').setOrigin(0.5);
 
@@ -84,21 +101,6 @@ export class GameScene extends Phaser.Scene {
                 this.map[y][x] = 0;
             }
         }
-
-        // 画像マップを初期化する
-        /*
-        this.imageMap = [];
-        for (let y = 0; y < this.MAP_HEIGHT; y++) {
-            this.imageMap.push([]);
-            for (let x = 0; x < this.MAP_WIDTH; x++) {
-                this.imageMap[y][x] = this.add.image(
-                    x * this.CELL_SIZE + this.MAP_OFFSET_X + this.CELL_SIZE / 2,
-                    y * this.CELL_SIZE + this.MAP_OFFSET_Y + this.CELL_SIZE / 2,
-                    "noimage");
-                this.imageMap[y][x].setScale(1.2);
-            }
-        }
-        */
 
         // テキストマップを初期化する
         this.textMap = [];
@@ -163,9 +165,8 @@ export class GameScene extends Phaser.Scene {
 
     // マップをクリック
     private clickMap(pointer: Phaser.Input.Pointer) {
-        // 現在のマウス位置
+        // 現在のマウス位置から、クリックしたマスを計算
         const currentPosition = new Phaser.Math.Vector2(pointer.x, pointer.y);
-
         const mapX = Math.floor((currentPosition.x - this.MAP_OFFSET_X) / this.CELL_SIZE);
         const mapY = Math.floor((currentPosition.y - this.MAP_OFFSET_Y) / this.CELL_SIZE);
 
@@ -194,7 +195,7 @@ export class GameScene extends Phaser.Scene {
         this.drawChoice(this.choice);
     }
 
-    // チェックボタンの有効無効を判定
+    // 配置ボタンの有効無効を判定
     private checkAndEnableConfirmButton() {
         if (this.choice != 0 && 0 <= this.mapX && 0 <= this.mapY && this.map[this.mapY][this.mapX] == 0) {
             this.confirmText.setFill('#ff0');
@@ -209,14 +210,8 @@ export class GameScene extends Phaser.Scene {
         if (!this.confirmOK) {
             return;
         }
-        this.map[this.mapY][this.mapX] = this.choice;
-        let choices = {
-            1: "005_22",
-            2: "005_65",
-            3: "005_75",
-        };
-        //this.imageMap[this.mapY][this.mapX].setTexture(choices[this.choice]);
-        this.textMap[this.mapY][this.mapX].setText("💮");
+        this.map[this.mapY][this.mapX] = this.choices[this.choice];
+        this.textMap[this.mapY][this.mapX].setText(this.choices[this.choice]);
         this.checkAndEnableConfirmButton();
         this.drawMap(this.mapX, this.mapY);
     }
@@ -252,18 +247,13 @@ export class GameScene extends Phaser.Scene {
 
     // 画面をクリック
     private drawChoice(choice: number) {
-        let choiceTexts = {
-            1: "005_22\nte4st\nhoge",
-            2: "005_65",
-            3: "005_75",
-        };
         let textStartX = this.MAP_OFFSET_X / 2;
 
-        this.choiceTexts[0].setText(choiceTexts[1]);
+        this.choiceTexts[0].setText(this.choices[1] + '\n' + this.UNIT_SPEC[this.choices[1]].desc);
         this.choiceTexts[0].setPosition(textStartX, this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE);
-        this.choiceTexts[1].setText(choiceTexts[2]);
+        this.choiceTexts[1].setText(this.choices[2] + '\n' + this.UNIT_SPEC[this.choices[2]].desc);
         this.choiceTexts[1].setPosition(textStartX, this.cameras.main.centerY);
-        this.choiceTexts[2].setText(choiceTexts[3]);
+        this.choiceTexts[2].setText(this.choices[3] + '\n' + this.UNIT_SPEC[this.choices[3]].desc);
         this.choiceTexts[2].setPosition(textStartX, this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE);
 
         // 枠線のスタイルを設定
@@ -285,13 +275,7 @@ export class GameScene extends Phaser.Scene {
             this.selectedText.setText(" ");
             return;
         }
-        let texts = {
-            1: "005_22\nte4st\nhoge",
-            2: "005_65",
-            3: "005_75",
-        };
-
-        this.selectedText.setText(texts[this.map[this.mapY][this.mapX]]);
+        this.selectedText.setText(this.map[this.mapY][this.mapX] + '\n' + this.UNIT_SPEC[this.map[this.mapY][this.mapX]].desc);
         this.selectedText.setPosition(this.SCREEN_WIDTH - this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
 
         // 枠線の矩形を描画
