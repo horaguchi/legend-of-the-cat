@@ -16,15 +16,25 @@ export class GameScene extends Phaser.Scene {
     private readonly CHOICE_SPACE = 20;
 
     private readonly UNIT_SPEC = {
-        "😺" : { tier: 1, desc: "Tier1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: {"💰": 10 }, tick: 20 },
-        "😹" : { tier: 2, desc: "Tier2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
-        "😼" : { tier: 3, desc: "Tier3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: {"💰": 1000 }, tick: 20 },
-        "👌" : { tier: 1, desc: "Tier1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: {"💰": 50 }, meta2: {"💰": 200 }, tick: 100 },
-        "🤞" : { tier: 2, desc: "Tier2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: {"💰": 500 }, meta2: {"💰": 2000 }, tick: 200 },
-        "🤟" : { tier: 3, desc: "Tier3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: {"💰": 5000 }, meta2: {"💰": 20000 }, tick: 300 },
+        "😺" : { tier: 1, desc: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: {"💰": 10 }, tick: 20 },
+        "😹" : { tier: 2, desc: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
+        "😼" : { tier: 3, desc: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: {"💰": 1000 }, tick: 20 },
+        "👌" : { tier: 1, desc: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: {"💰": 50 }, meta2: {"💰": 200 }, tick: 100 },
+        "🤞" : { tier: 2, desc: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: {"💰": 500 }, meta2: {"💰": 2000 }, tick: 200 },
+        "🤟" : { tier: 3, desc: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: {"💰": 5000 }, meta2: {"💰": 20000 }, tick: 300 },
     };
 
-    private map: string[][]; // マップデータ（0: 空白、1: 道）
+    // TODO:
+    // GAIN 
+    // CONVERT
+    // BUFF_SPEED
+    // BUFF_AMOUNT
+
+    private unitMap: { symbol: string, addTick: number, x: number, y: number }[][]; // ユニットマップデータ
+    private units: Record<string, { symbol: string, addTick: number, x: number, y: number }[]> = {
+        "GAIN": [],
+        "CONVERT": [],
+    };
     private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
@@ -35,12 +45,11 @@ export class GameScene extends Phaser.Scene {
     private statusText: Phaser.GameObjects.Text;
     private confirmText: Phaser.GameObjects.Text;
     private confirmOK: boolean = false;
-
-    private inventory = { "💰": 100 };
-    private mapX = -1;
-    private mapY = -1;
-    private choice = 0;
-    private choices = {
+    private inventory: Record<string, number> = { "💰": 100 };
+    private mapX: number = -1;
+    private mapY: number = -1;
+    private choice: number = 0;
+    private choices: Record<number, string> = {
         1: "😺",
         2: "😼",
         3: "👌"
@@ -93,12 +102,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createMap() {
-        // マップを初期化する
-        this.map = [];
+        // ユニットマップを初期化する
+        this.unitMap = [];
         for (let y = 0; y < this.MAP_HEIGHT; y++) {
-            this.map.push([]);
+            this.unitMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
-                this.map[y][x] = '';
+                this.unitMap[y][x] = null;
             }
         }
 
@@ -158,9 +167,17 @@ export class GameScene extends Phaser.Scene {
     update() {
     }
 
+    // 時間経過ごとの処理
     private updateTimer() {
         this.tick++;
+        this.resolveUnits();
         this.statusText.setText("Time: " + this.tick + ', Inventory: ' + this.getSimpleTextFromObject(this.inventory));
+        this.drawSelected();
+    }
+
+    // ユニットの計算処理
+    private resolveUnits() {
+
     }
 
     // マップをクリック
@@ -197,7 +214,7 @@ export class GameScene extends Phaser.Scene {
 
     // 配置ボタンの有効無効を判定
     private checkAndEnableConfirmButton() {
-        if (this.choice != 0 && 0 <= this.mapX && 0 <= this.mapY && this.map[this.mapY][this.mapX] == '') {
+        if (this.choice != 0 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX]) {
             this.confirmText.setFill('#ff0');
             this.confirmOK = true;
         } else {
@@ -206,12 +223,16 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    // 配置ボタン押下→ユニットの作成処理
     private clickConfirm() {
         if (!this.confirmOK) {
             return;
         }
-        this.map[this.mapY][this.mapX] = this.choices[this.choice];
-        this.textMap[this.mapY][this.mapX].setText(this.choices[this.choice]);
+        let symbol = this.choices[this.choice];
+        let spec = this.UNIT_SPEC[symbol];
+        this.unitMap[this.mapY][this.mapX] = { symbol: symbol, addTick: this.tick, x: this.mapX, y: this.mapY };
+        this.textMap[this.mapY][this.mapX].setText(symbol);
+        this.units[spec.type].push(this.unitMap[this.mapY][this.mapX]);
         this.checkAndEnableConfirmButton();
         this.drawMap(this.mapX, this.mapY);
     }
@@ -238,7 +259,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (0 <= mapX && 0 <= mapY) {
-            this.mapGraphics.lineStyle(this.ROAD_WIDTH, (this.map[mapY][mapX] == '' ? 0xffff00 : 0x00ffff));
+            this.mapGraphics.lineStyle(this.ROAD_WIDTH, (!this.unitMap[mapY][mapX] ? 0xffff00 : 0x00ffff));
             this.mapGraphics.strokeRect(this.MAP_OFFSET_X + mapX * this.CELL_SIZE, this.MAP_OFFSET_Y + mapY * this.CELL_SIZE, this.CELL_SIZE, this.CELL_SIZE);
         }
 
@@ -246,7 +267,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     // シンボルからスペックテキストを取得
-    private getTextFromSpec(symbol: string) {
+    private getSimpleTextFromObject(obj) {
+        return JSON.stringify(obj).replace(/"/g, '').replace(/([^{,]+):(\d+)/g, '$2$1').replace(/{([^,]+)}/, '$1');
+    }
+    private getTextFromSpec(symbol: string, noCost: boolean = false) {
         let spec = this.UNIT_SPEC[symbol];
         let meta = '';
         if (spec.type == "GAIN") {
@@ -254,14 +278,18 @@ export class GameScene extends Phaser.Scene {
         } else if (spec.type == "CONVERT") {
             meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
         }
-        return symbol + ': ' +  spec.desc + '\n' + meta + ' / ' + spec.tick + '\n' +
-            'Cost: -' + this.getSimpleTextFromObject(spec.cost);
+        return symbol + ': ' +  spec.desc + '\n' + meta + ' / ' + spec.tick + 
+            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
     }
-    private getSimpleTextFromObject(obj) {
-        return JSON.stringify(obj).replace(/"/g, '').replace(/([^{,]+):(\d+)/g, '$2$1').replace(/{([^,]+)}/, '$1');
+    private getTextFromSpecWithSelected() {
+        let unit = this.unitMap[this.mapY][this.mapX];
+        let symbol = unit.symbol;
+        let spec = this.UNIT_SPEC[symbol];
+
+        return this.getTextFromSpec(symbol, true) + '\n' + (this.tick - unit.addTick) % spec.tick;
     }
 
-    // 画面をクリック
+    // 左側の選択肢を描画
     private drawChoice(choice: number) {
         let textStartX = this.MAP_OFFSET_X / 2;
 
@@ -284,14 +312,14 @@ export class GameScene extends Phaser.Scene {
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2 + this.CHOICE_HEIGHT + this.CHOICE_SPACE, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
     }
 
-    // 画面をクリック
+    // 右側の説明を描画(選択中はtickごとに更新)
     private drawSelected() {
-        if (this.mapX < 0 || this.mapY < 0 || this.map[this.mapY][this.mapX] == '') {
+        if (this.mapX < 0 || this.mapY < 0 || !this.unitMap[this.mapY][this.mapX]) {
             this.selectedGraphics.clear();
             this.selectedText.setText(" ");
             return;
         }
-        this.selectedText.setText(this.getTextFromSpec(this.map[this.mapY][this.mapX]));
+        this.selectedText.setText(this.getTextFromSpecWithSelected());
         this.selectedText.setPosition(this.SCREEN_WIDTH - this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
 
         // 枠線の矩形を描画
