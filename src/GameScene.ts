@@ -12,14 +12,22 @@ export class GameScene extends Phaser.Scene {
     private readonly CHOICE_WIDTH = 300;
     private readonly CHOICE_HEIGHT = 80;
     private readonly CHOICE_SPACE = 20;
-    private readonly UNIT_SPEC = {
-        "😺" : { tier: 1, desc: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: {"💰": 10, "🌹": 1 }, tick: 20 },
-        "😹" : { tier: 2, desc: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: {"💰": 100 }, tick: 20 },
-        "😼" : { tier: 3, desc: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: {"💰": 1000 }, tick: 20 },
-        "👌" : { tier: 1, desc: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: {"🌹": 1 }, meta2: {"💰": 200 }, tick: 10 },
-        "🤞" : { tier: 2, desc: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: {"🌹": 1 }, meta2: {"💰": 2000 }, tick: 20 },
-        "🤟" : { tier: 3, desc: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: {"🌹": 1 }, meta2: {"💰": 20000 }, tick: 30 },
-    };
+    private readonly UNIT_SPEC: Record<string, {
+        tier: number,
+        desc: string,
+        cost: Record<string, number>,
+        type: string,
+        meta1: Record<string, number>,
+        meta2?: Record<string, number>,
+        tick: number
+    }> = {
+            "😺": { tier: 1, desc: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: { "💰": 10, "🌹": 1 }, tick: 10 },
+            "😹": { tier: 2, desc: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: { "💰": 100 }, tick: 10 },
+            "😼": { tier: 3, desc: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: { "💰": 1000 }, tick: 10 },
+            "👌": { tier: 1, desc: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
+            "🤞": { tier: 2, desc: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
+            "🤟": { tier: 3, desc: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
+        };
 
     // TODO:
     // GAIN 
@@ -27,12 +35,24 @@ export class GameScene extends Phaser.Scene {
     // BUFF_SPEED
     // BUFF_AMOUNT
 
-    private unitMap: { symbol: string, addTick: number, x: number, y: number }[][]; // ユニットマップデータ
-    private units: Record<string, { symbol: string, addTick: number, x: number, y: number }[]> = {
-        "GAIN": [],
-        "CONVERT": [],
-    };
+    // ユニットマップデータ
+    private unitMap: {
+        symbol: string,
+        addTick: number,
+        x: number,
+        y: number
+    }[][];
+    private units: Record<string, {
+        symbol: string,
+        addTick: number,
+        x: number,
+        y: number
+    }[]> = {
+            "GAIN": [],
+            "CONVERT": [],
+        };
     private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
+    private textTweenMap: Phaser.Tweens.Tween[][]; // 表示用テキストアニメマップデータ
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceTexts: Phaser.GameObjects.Text[];
@@ -75,7 +95,6 @@ export class GameScene extends Phaser.Scene {
         this.confirmText.setInteractive({ useHandCursor: true });
         this.confirmText.setOrigin(0.5);
         this.confirmText.on('pointerdown', () => {
-            console.log("test");
             this.clickConfirm();
         });
 
@@ -89,7 +108,7 @@ export class GameScene extends Phaser.Scene {
 
         // 右側、説明表示用オブジェクトを作成する
         this.selectedGraphics = this.add.graphics();
-        this.selectedText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center');
+        this.selectedText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
 
         this.createMap();
         this.drawMap();
@@ -107,15 +126,31 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // テキストマップを初期化する
+        // テキストマップ、アニメマップを初期化する
         this.textMap = [];
+        this.textTweenMap = [];
         for (let y = 0; y < this.MAP_HEIGHT; y++) {
             this.textMap.push([]);
+            this.textTweenMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 this.textMap[y][x] = this.add.text(
                     x * this.CELL_SIZE + this.MAP_OFFSET_X + this.CELL_SIZE / 2,
                     y * this.CELL_SIZE + this.MAP_OFFSET_Y + this.CELL_SIZE / 2,
                     " ").setFontSize(20).setFill('#fff').setOrigin(0.5);
+                let tween = this.tweens.add({
+                    targets: this.textMap[y][x],
+                    duration: 250,
+                    scaleX: 1.8,
+                    scaleY: 1.8,
+                    ease: 'Power1',
+                    yoyo: true,
+                    paused: true,
+                    repeat: -1,
+                    onRepeat: () => {
+                        tween.pause();
+                    },
+                });
+                this.textTweenMap[y][x] = tween;
             }
         }
 
@@ -133,9 +168,9 @@ export class GameScene extends Phaser.Scene {
         this.choiceGraphics = this.add.graphics();
 
         this.choiceTexts = [
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center'),
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center'),
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center'),
+            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
         ];
 
         // クリッカブル要素を追加
@@ -160,6 +195,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     update() {
+        this.tweens.update();
     }
 
     // 時間経過ごとの処理
@@ -179,6 +215,8 @@ export class GameScene extends Phaser.Scene {
                 for (let [key, value] of Object.entries(spec.meta1)) {
                     this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
                 }
+                // アニメ
+                this.textTweenMap[unit.y][unit.x].resume();
             }
         }
 
@@ -198,6 +236,8 @@ export class GameScene extends Phaser.Scene {
                     for (let [key, value] of Object.entries(spec.meta2)) {
                         this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
                     }
+                    // アニメ
+                    this.textTweenMap[unit.y][unit.x].resume();
                 }
             }
         }
@@ -329,7 +369,7 @@ export class GameScene extends Phaser.Scene {
         } else if (spec.type == "CONVERT") {
             meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
         }
-        return symbol + ': ' +  spec.desc + '\n' + meta + ' / ' + spec.tick + 
+        return symbol + ': ' + spec.desc + '\n' + meta + ' / ' + spec.tick +
             (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
     }
     private getTextFromSpecWithSelected() {
