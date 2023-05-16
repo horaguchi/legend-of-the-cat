@@ -251,7 +251,7 @@ export class GameScene extends Phaser.Scene {
         for (let text of this.selectionTexts) {
             this.selectionGroup.add(text);
         }
-        this.selectionConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 Selection").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
+        this.selectionConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 item").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
         this.selectionConfirmText.setInteractive({ useHandCursor: true });
         this.selectionConfirmText.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
             this.clickSelectionConfirm();
@@ -571,6 +571,7 @@ export class GameScene extends Phaser.Scene {
             this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
             // テキストを描画
             this.selectionTexts[i].setPosition(x, y).setText(this.selections[i]);
+            this.selectionConfirmText.setFill(selection == -1 ? '#999' : '#ff0');
             // クリッカブルを配置
             this.selectionContainers[i].setPosition(x, y);
         }
