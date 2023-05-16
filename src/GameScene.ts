@@ -14,20 +14,30 @@ export class GameScene extends Phaser.Scene {
     private readonly CHOICE_SPACE = 15;
     private readonly UNIT_SPEC: Record<string, {
         tier: number,
-        desc: string,
+        name: string,
         cost: Record<string, number>,
         type: string,
         meta1: Record<string, number>,
         meta2?: Record<string, number>,
         tick: number
     }> = {
-            "😺": { tier: 1, desc: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: { "💰": 10, "🌹": 1 }, tick: 10 },
-            "😹": { tier: 2, desc: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: { "💰": 100 }, tick: 10 },
-            "😼": { tier: 3, desc: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: { "💰": 1000 }, tick: 10 },
-            "👌": { tier: 1, desc: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
-            "🤞": { tier: 2, desc: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
-            "🤟": { tier: 3, desc: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
+            "😺": { tier: 1, name: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: { "💰": 10, "🌹": 1 }, tick: 10 },
+            "😹": { tier: 2, name: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: { "💰": 100 }, tick: 10 },
+            "😼": { tier: 3, name: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: { "💰": 1000 }, tick: 10 },
+            "👌": { tier: 1, name: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
+            "🤞": { tier: 2, name: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
+            "🤟": { tier: 3, name: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
         };
+    private readonly ITEM_SPEC: Record<string, {
+        name: string,
+        desc: string
+    }> = {
+        '👓': { name: 'Glasses', desc: 'gggg' },
+        '🦺': { name: 'Safety Vest', desc: 'aaa' },
+        '👔': { name: 'Necktie', desc: 'aaa' },
+        '🧤': { name: 'Gloves', desc: 'aaaaaaaa' },
+        '👗': { name: 'Dress', desc: 'aaaaaaa' },
+    };
 
     // TODO:
     // GAIN 
@@ -51,6 +61,10 @@ export class GameScene extends Phaser.Scene {
             "GAIN": [],
             "CONVERT": [],
         };
+    private items: {
+        symbol: string,
+        addTick: number,
+    }[] = [];
     private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
     private textTweenMap: Phaser.Tweens.Tween[][]; // 表示用テキストアニメマップデータ
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
@@ -69,12 +83,17 @@ export class GameScene extends Phaser.Scene {
     private inventory: Record<string, number> = { "💰": 100 };
     private mapX: number = -1;
     private mapY: number = -1;
-    private choice: number = 0;
-    private choices: Record<number, string> = {
-        1: "😺",
-        2: "😼",
-        3: "👌"
-    };
+    private choice: number = -1;
+    private choices: string[] = [
+        "😺",
+        "😼",
+        "👌",
+    ];
+    private selections: string[] = [
+        "🦺",
+        "🧤",
+        "👗"
+    ];
     private timerState: string = '▶️';
 
     constructor() {
@@ -129,7 +148,6 @@ export class GameScene extends Phaser.Scene {
 
         this.createSelection();
     }
-
     private createMap() {
         // ユニットマップを初期化する
         this.unitMap = [];
@@ -192,19 +210,19 @@ export class GameScene extends Phaser.Scene {
         choiceContainer1.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer1.setInteractive({ useHandCursor: true });
         choiceContainer1.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 1);
+            this.clickChoice(pointer, 0);
         });
         let choiceContainer2 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
         choiceContainer2.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer2.setInteractive({ useHandCursor: true });
         choiceContainer2.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 2);
+            this.clickChoice(pointer, 1);
         });
         let choiceContainer3 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE);
         choiceContainer3.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer3.setInteractive({ useHandCursor: true });
         choiceContainer3.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 3);
+            this.clickChoice(pointer, 2);
         });
     }
     private createSelection() {
@@ -234,16 +252,6 @@ export class GameScene extends Phaser.Scene {
         this.selectionGroup.setAlpha(0);
     }
     private startSelection() {
-        let selections = [
-            "aaaa\naaa",
-            "bbbb\naaa",
-            "cccc\naaa",
-            "dddd\naaa",
-            "eeee\naaa",
-            "eeee\naaa",
-            "eeee\naaa",
-            "eeee\naaa",
-        ];
         let space = 30;
         // 外枠・背景
         this.selectionGraphics.fillStyle(0x000000, 1);
@@ -254,14 +262,14 @@ export class GameScene extends Phaser.Scene {
         this.selectionTexts[0].setPosition(400, 400).setText('aaaaaaaaa\naaaaaaa');
 
         for (let i = 0; i < 9; ++i) {
-            if (selections.length <= i) {
+            if (this.selections.length <= i) {
                 this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
                 continue;
             }
             let x = this.cameras.main.centerX;
-            if (4 <= selections.length && selections.length <= 6) {
+            if (4 <= this.selections.length && this.selections.length <= 6) {
                 x = (i <= 2 ? x - (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2 : x + (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2);
-            } else if (7 <= selections.length && selections.length <= 9) {
+            } else if (7 <= this.selections.length && this.selections.length <= 9) {
                 x = (i <= 2
                     ? x - this.CHOICE_WIDTH - this.CHOICE_SPACE
                     : 6 <= i
@@ -279,7 +287,7 @@ export class GameScene extends Phaser.Scene {
             this.selectionGraphics.lineStyle(1, 0xffffff);
             this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
 
-            this.selectionTexts[i].setPosition(x, y).setText(selections[i]);
+            this.selectionTexts[i].setPosition(x, y).setText(this.selections[i]);
         }
 
         this.tweens.add({
@@ -378,7 +386,7 @@ export class GameScene extends Phaser.Scene {
     // 左側選択肢をクリック
     private clickChoice(pointer: Phaser.Input.Pointer, choice: number) {
         if (this.choice == choice) {
-            this.choice = 0;
+            this.choice = -1;
         } else {
             this.choice = choice;
         }
@@ -388,7 +396,7 @@ export class GameScene extends Phaser.Scene {
 
     // 配置ボタンの有効無効を判定
     private checkAndEnableConfirmButton() {
-        if (this.choice != 0 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX] && this.checkPurchasable()) {
+        if (this.choice != -1 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX] && this.checkPurchasable()) {
             this.confirmText.setFill('#ff0');
             this.confirmOK = true;
         } else {
@@ -490,7 +498,7 @@ export class GameScene extends Phaser.Scene {
         } else if (spec.type == "CONVERT") {
             meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
         }
-        return symbol + ': ' + spec.desc + '\n' + meta + ' / ' + spec.tick +
+        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + spec.tick +
             (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
     }
     private getTextFromSpecWithSelected() {
@@ -505,22 +513,22 @@ export class GameScene extends Phaser.Scene {
     private drawChoice(choice: number) {
         let textStartX = this.MAP_OFFSET_X / 2;
 
-        this.choiceTexts[0].setText(this.getTextFromSpec(this.choices[1]));
+        this.choiceTexts[0].setText(this.getTextFromSpec(this.choices[0]));
         this.choiceTexts[0].setPosition(textStartX, this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE);
-        this.choiceTexts[1].setText(this.getTextFromSpec(this.choices[2]));
+        this.choiceTexts[1].setText(this.getTextFromSpec(this.choices[1]));
         this.choiceTexts[1].setPosition(textStartX, this.cameras.main.centerY);
-        this.choiceTexts[2].setText(this.getTextFromSpec(this.choices[3]));
+        this.choiceTexts[2].setText(this.getTextFromSpec(this.choices[2]));
         this.choiceTexts[2].setPosition(textStartX, this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE);
 
         // 枠線のスタイルを設定
         let startX = (this.MAP_OFFSET_X - this.CHOICE_WIDTH) / 2;
 
         // 枠線の矩形を描画
-        this.choiceGraphics.lineStyle(1, (choice == 1 ? 0xffff00 : this.LINE_COLOR));
+        this.choiceGraphics.lineStyle(1, (choice == 0 ? 0xffff00 : this.LINE_COLOR));
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2 - this.CHOICE_HEIGHT - this.CHOICE_SPACE, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-        this.choiceGraphics.lineStyle(1, (choice == 2 ? 0xffff00 : this.LINE_COLOR));
+        this.choiceGraphics.lineStyle(1, (choice == 1 ? 0xffff00 : this.LINE_COLOR));
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-        this.choiceGraphics.lineStyle(1, (choice == 3 ? 0xffff00 : this.LINE_COLOR));
+        this.choiceGraphics.lineStyle(1, (choice == 2 ? 0xffff00 : this.LINE_COLOR));
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2 + this.CHOICE_HEIGHT + this.CHOICE_SPACE, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
     }
 
