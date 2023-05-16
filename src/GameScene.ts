@@ -56,10 +56,10 @@ export class GameScene extends Phaser.Scene {
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceTexts: Phaser.GameObjects.Text[];
-    private passiveGroup: Phaser.GameObjects.Group; // 描画用オブジェクト
-    private passiveGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
-    private passiveTexts: Phaser.GameObjects.Text[];
-    private passiveConfirmText: Phaser.GameObjects.Text;
+    private selectionGroup: Phaser.GameObjects.Group; // 描画用オブジェクト
+    private selectionGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
+    private selectionTexts: Phaser.GameObjects.Text[];
+    private selectionConfirmText: Phaser.GameObjects.Text;
     private selectedGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectedText: Phaser.GameObjects.Text;
     private tick: number = 0;
@@ -127,7 +127,7 @@ export class GameScene extends Phaser.Scene {
         this.createChoice();
         this.drawChoice(0);
 
-        this.createPassive();
+        this.createSelection();
     }
 
     private createMap() {
@@ -207,10 +207,10 @@ export class GameScene extends Phaser.Scene {
             this.clickChoice(pointer, 3);
         });
     }
-    private createPassive() {
-        this.passiveGroup = this.add.group();
-        this.passiveGraphics = this.add.graphics();
-        this.passiveTexts = [
+    private createSelection() {
+        this.selectionGroup = this.add.group();
+        this.selectionGraphics = this.add.graphics();
+        this.selectionTexts = [
             this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
             this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
             this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
@@ -221,20 +221,20 @@ export class GameScene extends Phaser.Scene {
             this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
             this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
         ];
-        for (let text of this.passiveTexts) {
-            this.passiveGroup.add(text);
+        for (let text of this.selectionTexts) {
+            this.selectionGroup.add(text);
         }
-        this.passiveConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 Passive").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
-        this.passiveConfirmText.setInteractive({ useHandCursor: true });
-        this.passiveConfirmText.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickPassiveConfirm();
+        this.selectionConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 Selection").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
+        this.selectionConfirmText.setInteractive({ useHandCursor: true });
+        this.selectionConfirmText.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+            this.clickSelectionConfirm();
         });
-        this.passiveGroup.add(this.passiveConfirmText);
-        this.passiveGroup.add(this.passiveGraphics);
-        this.passiveGroup.setAlpha(0);
+        this.selectionGroup.add(this.selectionConfirmText);
+        this.selectionGroup.add(this.selectionGraphics);
+        this.selectionGroup.setAlpha(0);
     }
-    private startPassive() {
-        let passives = [
+    private startSelection() {
+        let selections = [
             "aaaa\naaa",
             "bbbb\naaa",
             "cccc\naaa",
@@ -246,22 +246,22 @@ export class GameScene extends Phaser.Scene {
         ];
         let space = 30;
         // 外枠・背景
-        this.passiveGraphics.fillStyle(0x000000, 1);
-        this.passiveGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
-        this.passiveGraphics.lineStyle(1, 0xffffff);
-        this.passiveGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        this.selectionGraphics.fillStyle(0x000000, 1);
+        this.selectionGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        this.selectionGraphics.lineStyle(1, 0xffffff);
+        this.selectionGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
 
-        this.passiveTexts[0].setPosition(400, 400).setText('aaaaaaaaa\naaaaaaa');
+        this.selectionTexts[0].setPosition(400, 400).setText('aaaaaaaaa\naaaaaaa');
 
         for (let i = 0; i < 9; ++i) {
-            if (passives.length <= i) {
-                this.passiveTexts[i].setPosition(1000, 1000).setText(' ');
+            if (selections.length <= i) {
+                this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
                 continue;
             }
             let x = this.cameras.main.centerX;
-            if (4 <= passives.length && passives.length <= 6) {
+            if (4 <= selections.length && selections.length <= 6) {
                 x = (i <= 2 ? x - (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2 : x + (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2);
-            } else if (7 <= passives.length && passives.length <= 9) {
+            } else if (7 <= selections.length && selections.length <= 9) {
                 x = (i <= 2
                     ? x - this.CHOICE_WIDTH - this.CHOICE_SPACE
                     : 6 <= i
@@ -276,16 +276,14 @@ export class GameScene extends Phaser.Scene {
                     ? y + this.CHOICE_HEIGHT + this.CHOICE_SPACE
                     : y);
 
-            this.passiveGraphics.lineStyle(1, 0xffffff);
-            this.passiveGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+            this.selectionGraphics.lineStyle(1, 0xffffff);
+            this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
 
-            this.passiveTexts[i].setPosition(x, y).setText(passives[i]);
+            this.selectionTexts[i].setPosition(x, y).setText(selections[i]);
         }
 
-        //this.confirmText.removeInteractive();
-
         this.tweens.add({
-            targets: this.passiveGroup.getChildren(),
+            targets: this.selectionGroup.getChildren(),
             duration: 250,
             ease: 'Power1',
             alpha: 0.95
@@ -310,7 +308,7 @@ export class GameScene extends Phaser.Scene {
         if (this.tick == 3) {
             this.timerState = '▶️';
             this.drawStatus();
-            this.startPassive();
+            this.startSelection();
         }
     }
 
@@ -422,10 +420,10 @@ export class GameScene extends Phaser.Scene {
         this.drawMap(this.mapX, this.mapY);
     }
 
-    // 
-    private clickPassiveConfirm() {
+    // パッシブ選択画面を確認
+    private clickSelectionConfirm() {
         this.tweens.add({
-            targets: this.passiveGroup.getChildren(),
+            targets: this.selectionGroup.getChildren(),
             duration: 250,
             ease: 'Power1',
             alpha: 0
