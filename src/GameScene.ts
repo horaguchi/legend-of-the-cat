@@ -71,6 +71,7 @@ export class GameScene extends Phaser.Scene {
         2: "😼",
         3: "👌"
     };
+    private timerState: string = '▶️';
 
     constructor() {
         super("game");
@@ -88,7 +89,11 @@ export class GameScene extends Phaser.Scene {
         });
 
         // ステータス表示用テキストの初期化
-        this.statusText = this.add.text(10, 10, "Time: " + this.tick).setFontSize(20).setFill('#fff');
+        this.statusText = this.add.text(10, 10, "  ").setFontSize(20).setFill('#fff');
+        this.statusText.setInteractive({ useHandCursor: true });
+        this.statusText.on('pointerdown', () => {
+            this.clickStatus();
+        });
 
         // 配置ボタンの初期化
         this.confirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999');
@@ -109,6 +114,8 @@ export class GameScene extends Phaser.Scene {
         // 右側、説明表示用オブジェクトを作成する
         this.selectedGraphics = this.add.graphics();
         this.selectedText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
+
+        this.drawStatus();
 
         this.createMap();
         this.drawMap();
@@ -200,6 +207,9 @@ export class GameScene extends Phaser.Scene {
 
     // 時間経過ごとの処理
     private updateTimer() {
+        if (this.timerState == '▶️') {
+            return;
+        }
         this.tick++;
         this.resolveUnits();
         this.drawStatus();
@@ -241,6 +251,12 @@ export class GameScene extends Phaser.Scene {
                 }
             }
         }
+    }
+
+    // ステータスをクリック
+    private clickStatus() {
+        this.timerState = (this.timerState == '▶️' ? '⏸️' : '▶️');
+        this.drawStatus();
     }
 
     // マップをクリック
@@ -291,12 +307,12 @@ export class GameScene extends Phaser.Scene {
         if (!this.confirmOK) {
             return;
         }
-        let symbol = this.choices[this.choice];
-        let spec = this.UNIT_SPEC[symbol];
-
         if (!this.checkPurchasable()) { // 買えない限り押せるようにはなってないはずだが…
             return;
         }
+
+        let symbol = this.choices[this.choice];
+        let spec = this.UNIT_SPEC[symbol];
         for (let [key, value] of Object.entries(spec.cost)) {
             this.inventory[key] -= Number(value);
         }
@@ -325,7 +341,7 @@ export class GameScene extends Phaser.Scene {
 
     // ステータスを更新する
     private drawStatus() {
-        this.statusText.setText("Time: " + this.tick + ', Inventory: ' + this.getSimpleTextFromObject(this.inventory));
+        this.statusText.setText(this.timerState + " Time: " + this.tick + ', Inventory: ' + this.getSimpleTextFromObject(this.inventory));
     }
 
     // マップを描画する
@@ -377,7 +393,7 @@ export class GameScene extends Phaser.Scene {
         let symbol = unit.symbol;
         let spec = this.UNIT_SPEC[symbol];
 
-        return this.getTextFromSpec(symbol, true) + '\n' + (this.tick - unit.addTick) % spec.tick;
+        return this.getTextFromSpec(symbol, true) + '\n' + (spec.tick - (this.tick - unit.addTick) % spec.tick);
     }
 
     // 左側の選択肢を描画
