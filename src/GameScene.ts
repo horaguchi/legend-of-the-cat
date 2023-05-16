@@ -11,7 +11,7 @@ export class GameScene extends Phaser.Scene {
     private readonly MAP_OFFSET_Y = (this.SCREEN_HEIGHT - this.CELL_SIZE * this.MAP_HEIGHT) / 2; // マップの横幅（マス数）
     private readonly CHOICE_WIDTH = 300;
     private readonly CHOICE_HEIGHT = 80;
-    private readonly CHOICE_SPACE = 20;
+    private readonly CHOICE_SPACE = 15;
     private readonly UNIT_SPEC: Record<string, {
         tier: number,
         desc: string,
@@ -56,6 +56,10 @@ export class GameScene extends Phaser.Scene {
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private choiceTexts: Phaser.GameObjects.Text[];
+    private passiveGroup: Phaser.GameObjects.Group; // 描画用オブジェクト
+    private passiveGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
+    private passiveTexts: Phaser.GameObjects.Text[];
+    private passiveConfirmText: Phaser.GameObjects.Text;
     private selectedGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectedText: Phaser.GameObjects.Text;
     private tick: number = 0;
@@ -122,7 +126,10 @@ export class GameScene extends Phaser.Scene {
 
         this.createChoice();
         this.drawChoice(0);
+
+        this.createPassive();
     }
+
     private createMap() {
         // ユニットマップを初期化する
         this.unitMap = [];
@@ -200,6 +207,90 @@ export class GameScene extends Phaser.Scene {
             this.clickChoice(pointer, 3);
         });
     }
+    private createPassive() {
+        this.passiveGroup = this.add.group();
+        this.passiveGraphics = this.add.graphics();
+        this.passiveTexts = [
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
+        ];
+        for (let text of this.passiveTexts) {
+            this.passiveGroup.add(text);
+        }
+        this.passiveConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 Passive").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
+        this.passiveConfirmText.setInteractive({ useHandCursor: true });
+        this.passiveConfirmText.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+            this.clickPassiveConfirm();
+        });
+        this.passiveGroup.add(this.passiveConfirmText);
+        this.passiveGroup.add(this.passiveGraphics);
+        this.passiveGroup.setAlpha(0);
+    }
+    private startPassive() {
+        let passives = [
+            "aaaa\naaa",
+            "bbbb\naaa",
+            "cccc\naaa",
+            "dddd\naaa",
+            "eeee\naaa",
+            "eeee\naaa",
+            "eeee\naaa",
+            "eeee\naaa",
+        ];
+        let space = 30;
+        // 外枠・背景
+        this.passiveGraphics.fillStyle(0x000000, 1);
+        this.passiveGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        this.passiveGraphics.lineStyle(1, 0xffffff);
+        this.passiveGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+
+        this.passiveTexts[0].setPosition(400, 400).setText('aaaaaaaaa\naaaaaaa');
+
+        for (let i = 0; i < 9; ++i) {
+            if (passives.length <= i) {
+                this.passiveTexts[i].setPosition(1000, 1000).setText(' ');
+                continue;
+            }
+            let x = this.cameras.main.centerX;
+            if (4 <= passives.length && passives.length <= 6) {
+                x = (i <= 2 ? x - (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2 : x + (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2);
+            } else if (7 <= passives.length && passives.length <= 9) {
+                x = (i <= 2
+                    ? x - this.CHOICE_WIDTH - this.CHOICE_SPACE
+                    : 6 <= i
+                        ? x + this.CHOICE_WIDTH + this.CHOICE_SPACE
+                        : x);
+            }
+            let y = this.cameras.main.centerY;
+
+            y = (i % 3 == 0
+                ? y - this.CHOICE_HEIGHT - this.CHOICE_SPACE
+                : i % 3 == 2
+                    ? y + this.CHOICE_HEIGHT + this.CHOICE_SPACE
+                    : y);
+
+            this.passiveGraphics.lineStyle(1, 0xffffff);
+            this.passiveGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+
+            this.passiveTexts[i].setPosition(x, y).setText(passives[i]);
+        }
+
+        //this.confirmText.removeInteractive();
+
+        this.tweens.add({
+            targets: this.passiveGroup.getChildren(),
+            duration: 250,
+            ease: 'Power1',
+            alpha: 0.95
+        });
+    }
 
     update() {
         this.tweens.update();
@@ -215,6 +306,12 @@ export class GameScene extends Phaser.Scene {
         this.drawStatus();
         this.checkAndEnableConfirmButton();
         this.drawSelected();
+
+        if (this.tick == 3) {
+            this.timerState = '▶️';
+            this.drawStatus();
+            this.startPassive();
+        }
     }
 
     // ユニットの資源生成解決処理
@@ -323,6 +420,16 @@ export class GameScene extends Phaser.Scene {
         this.checkAndEnableConfirmButton();
         this.drawStatus();
         this.drawMap(this.mapX, this.mapY);
+    }
+
+    // 
+    private clickPassiveConfirm() {
+        this.tweens.add({
+            targets: this.passiveGroup.getChildren(),
+            duration: 250,
+            ease: 'Power1',
+            alpha: 0
+        });
     }
 
     // 購入可能か判定
