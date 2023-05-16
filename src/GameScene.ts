@@ -74,10 +74,12 @@ export class GameScene extends Phaser.Scene {
     private selectionGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectionTexts: Phaser.GameObjects.Text[];
     private selectionConfirmText: Phaser.GameObjects.Text;
+    private selectionContainers: Phaser.GameObjects.Container[];
     private selectedGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectedText: Phaser.GameObjects.Text;
     private tick: number = 0;
     private statusText: Phaser.GameObjects.Text;
+    private itemTexts: Phaser.GameObjects.Text[];
     private confirmText: Phaser.GameObjects.Text;
     private confirmOK: boolean = false;
     private inventory: Record<string, number> = { "💰": 100 };
@@ -89,10 +91,12 @@ export class GameScene extends Phaser.Scene {
         "😼",
         "👌",
     ];
+    private selection: number = -1;
     private selections: string[] = [
         "🦺",
         "🧤",
-        "👗"
+        "👗",
+        '👔',
     ];
     private timerState: string = '▶️';
 
@@ -117,6 +121,12 @@ export class GameScene extends Phaser.Scene {
         this.statusText.on('pointerdown', () => {
             this.clickStatus();
         });
+
+        // アイテム表示用テキストの初期化
+        this.itemTexts = [];
+        for (let i = 0; i < 30; ++i) {
+            this.itemTexts.push(this.add.text(10 + 25 * i, 60, " ").setFontSize(20).setFill('#fff'));
+        }
 
         // 配置ボタンの初期化
         this.confirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999');
@@ -144,7 +154,7 @@ export class GameScene extends Phaser.Scene {
         this.drawMap();
 
         this.createChoice();
-        this.drawChoice(0);
+        this.drawChoice(-1);
 
         this.createSelection();
     }
@@ -198,13 +208,10 @@ export class GameScene extends Phaser.Scene {
     private createChoice() {
         // 枠線のスタイルを設定
         this.choiceGraphics = this.add.graphics();
-
-        this.choiceTexts = [
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-        ];
-
+        this.choiceTexts = [];
+        for (let i = 0; i < 3; ++i) {
+            this.choiceTexts.push(this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
+        }
         // クリッカブル要素を追加
         let choiceContainer1 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE);
         choiceContainer1.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
@@ -228,17 +235,19 @@ export class GameScene extends Phaser.Scene {
     private createSelection() {
         this.selectionGroup = this.add.group();
         this.selectionGraphics = this.add.graphics();
-        this.selectionTexts = [
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-            this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5),
-        ];
+        this.selectionTexts = [];
+        this.selectionContainers = [];
+        for (let i = 0; i < 9; ++i) {
+            this.selectionTexts.push(this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
+            
+            // クリッカブル要素を追加
+            this.selectionContainers.push(this.add.container(1000, 1000));
+            this.selectionContainers[i].setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+            this.selectionContainers[i].setInteractive({ useHandCursor: true });
+            this.selectionContainers[i].on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+                this.clickSelection(pointer, i);
+            });
+        }
         for (let text of this.selectionTexts) {
             this.selectionGroup.add(text);
         }
@@ -252,49 +261,12 @@ export class GameScene extends Phaser.Scene {
         this.selectionGroup.setAlpha(0);
     }
     private startSelection() {
-        let space = 30;
-        // 外枠・背景
-        this.selectionGraphics.fillStyle(0x000000, 1);
-        this.selectionGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
-        this.selectionGraphics.lineStyle(1, 0xffffff);
-        this.selectionGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
-
-        this.selectionTexts[0].setPosition(400, 400).setText('aaaaaaaaa\naaaaaaa');
-
-        for (let i = 0; i < 9; ++i) {
-            if (this.selections.length <= i) {
-                this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
-                continue;
-            }
-            let x = this.cameras.main.centerX;
-            if (4 <= this.selections.length && this.selections.length <= 6) {
-                x = (i <= 2 ? x - (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2 : x + (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2);
-            } else if (7 <= this.selections.length && this.selections.length <= 9) {
-                x = (i <= 2
-                    ? x - this.CHOICE_WIDTH - this.CHOICE_SPACE
-                    : 6 <= i
-                        ? x + this.CHOICE_WIDTH + this.CHOICE_SPACE
-                        : x);
-            }
-            let y = this.cameras.main.centerY;
-
-            y = (i % 3 == 0
-                ? y - this.CHOICE_HEIGHT - this.CHOICE_SPACE
-                : i % 3 == 2
-                    ? y + this.CHOICE_HEIGHT + this.CHOICE_SPACE
-                    : y);
-
-            this.selectionGraphics.lineStyle(1, 0xffffff);
-            this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-
-            this.selectionTexts[i].setPosition(x, y).setText(this.selections[i]);
-        }
-
+        this.drawSelection(-1);
         this.tweens.add({
             targets: this.selectionGroup.getChildren(),
             duration: 250,
             ease: 'Power1',
-            alpha: 0.95
+            alpha: 1
         });
     }
 
@@ -394,6 +366,16 @@ export class GameScene extends Phaser.Scene {
         this.drawChoice(this.choice);
     }
 
+    // 左側選択肢をクリック
+    private clickSelection(pointer: Phaser.Input.Pointer, selection: number) {
+        if (this.selection == selection) {
+            this.selection = -1;
+        } else {
+            this.selection = selection;
+        }
+        this.drawSelection(this.selection);
+    }
+
     // 配置ボタンの有効無効を判定
     private checkAndEnableConfirmButton() {
         if (this.choice != -1 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX] && this.checkPurchasable()) {
@@ -428,14 +410,35 @@ export class GameScene extends Phaser.Scene {
         this.drawMap(this.mapX, this.mapY);
     }
 
-    // パッシブ選択画面を確認
+    // アイテム選択画面を完了→アイテム追加処理
     private clickSelectionConfirm() {
+        if (this.selection == -1) {
+            return;
+        }
+        // アイテム追加
+        this.items.push({ symbol: this.selections[this.selection], addTick: this.tick });
+        let i = this.items.length - 1;
+        this.itemTexts[i].setText(this.items[i].symbol);
+        this.itemTexts[i].setInteractive({ useHandCursor: true });
+        this.itemTexts[i].on("pointerdown", () => {
+            this.clickItem(i);
+        });
+
+        // 画面隠し
+        for (let i = 0; i < 9; ++i) {
+            this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
+            this.selectionContainers[i].setPosition(1000, 1000);
+        }
         this.tweens.add({
             targets: this.selectionGroup.getChildren(),
             duration: 250,
             ease: 'Power1',
             alpha: 0
         });
+    }
+
+    private clickItem(item: number) {
+
     }
 
     // 購入可能か判定
@@ -532,6 +535,47 @@ export class GameScene extends Phaser.Scene {
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2 + this.CHOICE_HEIGHT + this.CHOICE_SPACE, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
     }
 
+    private drawSelection(selection: number) {
+        let space = 30;
+        // 外枠・背景
+        this.selectionGraphics.fillStyle(0x000000, 1);
+        this.selectionGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        this.selectionGraphics.lineStyle(1, 0xffffff);
+        this.selectionGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        for (let i = 0; i < 9; ++i) {
+            if (this.selections.length <= i) {
+                this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
+                this.selectionContainers[i].setPosition(1000, 1000);
+                continue;
+            }
+            let x = this.cameras.main.centerX;
+            if (4 <= this.selections.length && this.selections.length <= 6) {
+                x = (i <= 2 ? x - (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2 : x + (this.CHOICE_WIDTH + this.CHOICE_SPACE) / 2);
+            } else if (7 <= this.selections.length && this.selections.length <= 9) {
+                x = (i <= 2
+                    ? x - this.CHOICE_WIDTH - this.CHOICE_SPACE
+                    : 6 <= i
+                        ? x + this.CHOICE_WIDTH + this.CHOICE_SPACE
+                        : x);
+            }
+            let y = this.cameras.main.centerY;
+
+            y = (i % 3 == 0
+                ? y - this.CHOICE_HEIGHT - this.CHOICE_SPACE
+                : i % 3 == 2
+                    ? y + this.CHOICE_HEIGHT + this.CHOICE_SPACE
+                    : y);
+
+            // 矩形を描画
+            this.selectionGraphics.lineStyle(1, i == selection ? 0xffff00 : 0xffffff);
+            this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+            // テキストを描画
+            this.selectionTexts[i].setPosition(x, y).setText(this.selections[i]);
+            // クリッカブルを配置
+            this.selectionContainers[i].setPosition(x, y);
+        }
+
+    }
     // 右側の説明を描画(選択中はtickごとに更新)
     private drawSelected() {
         if (this.mapX < 0 || this.mapY < 0 || !this.unitMap[this.mapY][this.mapX]) {
