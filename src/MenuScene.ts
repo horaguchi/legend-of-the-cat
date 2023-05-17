@@ -6,18 +6,31 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        const startButton = this.add.text(this.cameras.main.centerX, 300, 'Start Game').setFontSize(32).setFill('#fff').setOrigin(0.5);
+        const title =  this.add.text(this.cameras.main.centerX, 200, 'Legend of the Cat').setFontSize(80).setFill('#fff').setOrigin(0.5);
+        this.tweens.add({
+            targets: title,
+            duration: 250,
+            scaleX: 1.05,
+            scaleY: 1.05,
+            ease: 'Power1',
+            yoyo: true,
+            repeat: -1,
+        });
 
-        startButton.setInteractive();
+        const startButton = this.add.text(this.cameras.main.centerX, 350, 'Start Game').setFontSize(32).setFill('#fff').setOrigin(0.5);
+        startButton.setInteractive({ useHandCursor: true });
         startButton.on('pointerdown', () => {
             this.scene.start('game');
         });
 
-        const settingsButton = this.add.text(this.cameras.main.centerX, 350, 'Settings').setFontSize(32).setFill('#fff').setOrigin(0.5);
-
-        settingsButton.setInteractive();
+        const settingsButton = this.add.text(this.cameras.main.centerX, 450, 'Settings').setFontSize(32).setFill('#fff').setOrigin(0.5);
+        settingsButton.setInteractive({ useHandCursor: true });
         settingsButton.on('pointerdown', () => {
             this.scene.start('settings');
         });
+    }
+
+    update() {
+        this.tweens.update();
     }
 }
