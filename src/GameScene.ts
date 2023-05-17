@@ -80,6 +80,8 @@ export class GameScene extends Phaser.Scene {
     private selectedItem: number = -1; // 説明選択用
     private tick: number = 0;
     private statusText: Phaser.GameObjects.Text;
+    private pauseText: Phaser.GameObjects.Text;
+    private pauseTween: Phaser.Tweens.Tween;
     private itemTexts: Phaser.GameObjects.Text[];
     private confirmText: Phaser.GameObjects.Text;
     private confirmOK: boolean = false;
@@ -111,16 +113,33 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // 全体クリックイベントを設定する
-        this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            //this.click(pointer);
-        });
-
         // ステータス表示用テキストの初期化
         this.statusText = this.add.text(10, 10, "  ").setFontSize(20).setFill('#fff');
-        this.statusText.setInteractive({ useHandCursor: true });
-        this.statusText.on('pointerdown', () => {
-            this.clickStatus();
+
+        // ポーズボタン用テキスト・クリッカブル要素の初期化
+        this.pauseText = this.add.text(this.SCREEN_WIDTH - 25, 25, this.timerState).setFontSize(20).setFill('#fff').setOrigin(0.5);
+        this.pauseTween = this.tweens.add({
+            targets: this.pauseText,
+            duration: 150,
+            scaleX: 1.8,
+            scaleY: 1.8,
+            ease: 'Power1',
+            yoyo: true,
+            repeat: -1,
+            onRepeat: () => {
+                if (this.timerState == '⏸️') {
+                    this.pauseTween.pause();
+                }
+            }
+        });
+        let pauseGraphics = this.add.graphics();
+        pauseGraphics.lineStyle(1, 0xffffff);
+        pauseGraphics.strokeRect(this.SCREEN_WIDTH - 40, 10, 30, 30);
+        let pauseContainer = this.add.container(this.SCREEN_WIDTH - 25, 25);
+        pauseContainer.setSize(30, 30);
+        pauseContainer.setInteractive({ useHandCursor: true });
+        pauseContainer.on('pointerdown', () => {
+            this.clickPause();
         });
 
         // アイテム表示用テキストの初期化
@@ -150,6 +169,7 @@ export class GameScene extends Phaser.Scene {
         this.selectedText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
 
         this.drawStatus();
+        this.drawPause();
 
         this.createMap();
         this.drawMap();
@@ -217,20 +237,20 @@ export class GameScene extends Phaser.Scene {
         let choiceContainer1 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE);
         choiceContainer1.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer1.setInteractive({ useHandCursor: true });
-        choiceContainer1.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 0);
+        choiceContainer1.on("pointerdown", () => {
+            this.clickChoice(0);
         });
         let choiceContainer2 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
         choiceContainer2.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer2.setInteractive({ useHandCursor: true });
-        choiceContainer2.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 1);
+        choiceContainer2.on("pointerdown", () => {
+            this.clickChoice(1);
         });
         let choiceContainer3 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE);
         choiceContainer3.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         choiceContainer3.setInteractive({ useHandCursor: true });
-        choiceContainer3.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-            this.clickChoice(pointer, 2);
+        choiceContainer3.on("pointerdown", () => {
+            this.clickChoice(2);
         });
     }
     private createSelection() {
@@ -245,8 +265,8 @@ export class GameScene extends Phaser.Scene {
             this.selectionContainers.push(this.add.container(1000, 1000));
             this.selectionContainers[i].setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
             this.selectionContainers[i].setInteractive({ useHandCursor: true });
-            this.selectionContainers[i].on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-                this.clickSelection(pointer, i);
+            this.selectionContainers[i].on("pointerdown", () => {
+                this.clickSelection(i);
             });
         }
         for (let text of this.selectionTexts) {
@@ -254,7 +274,7 @@ export class GameScene extends Phaser.Scene {
         }
         this.selectionConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 item").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
         this.selectionConfirmText.setInteractive({ useHandCursor: true });
-        this.selectionConfirmText.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+        this.selectionConfirmText.on("pointerdown", () => {
             this.clickSelectionConfirm();
         });
         this.selectionGroup.add(this.selectionConfirmText);
@@ -289,6 +309,7 @@ export class GameScene extends Phaser.Scene {
         if (this.tick == 3) {
             this.timerState = '▶️';
             this.drawStatus();
+            this.drawPause();
             this.startSelection();
         }
     }
@@ -329,10 +350,10 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    // ステータスをクリック
-    private clickStatus() {
+    // 右上のポーズクリック
+    private clickPause() {
         this.timerState = (this.timerState == '▶️' ? '⏸️' : '▶️');
-        this.drawStatus();
+        this.drawPause();
     }
 
     // マップをクリック
@@ -358,7 +379,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 左側選択肢をクリック
-    private clickChoice(pointer: Phaser.Input.Pointer, choice: number) {
+    private clickChoice(choice: number) {
         if (this.choice == choice) {
             this.choice = -1;
         } else {
@@ -368,8 +389,8 @@ export class GameScene extends Phaser.Scene {
         this.drawChoice(this.choice);
     }
 
-    // 左側選択肢をクリック
-    private clickSelection(pointer: Phaser.Input.Pointer, selection: number) {
+    // 全体選択画面の選択肢をクリック
+    private clickSelection(selection: number) {
         if (this.selection == selection) {
             this.selection = -1;
         } else {
@@ -439,6 +460,7 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    // ステータス下の、既に取得したアイテムを選択(内容確認)
     private clickItem(item: number) {
         this.selectedItem = (this.selectedItem == item ? -1 : item);
         this.drawSelected();
@@ -460,7 +482,15 @@ export class GameScene extends Phaser.Scene {
 
     // ステータスを更新する
     private drawStatus() {
-        this.statusText.setText(this.timerState + " Time: " + this.tick + ', Inventory: ' + this.getSimpleTextFromObject(this.inventory));
+        this.statusText.setText("Time: " + this.tick + ', Inventory: ' + this.getSimpleTextFromObject(this.inventory));
+    }
+
+    // 右上のポーズボタンを更新する
+    private drawPause() {
+        this.pauseText.setText(this.timerState);
+        if (this.timerState == '▶️') {
+            this.pauseTween.resume();
+        }
     }
 
     // マップを描画する
@@ -542,6 +572,7 @@ export class GameScene extends Phaser.Scene {
         this.choiceGraphics.strokeRect(startX, this.cameras.main.centerY - this.CHOICE_HEIGHT / 2 + this.CHOICE_HEIGHT + this.CHOICE_SPACE, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
     }
 
+    // 全画面アイテム選択画面 (別関数でアルファを更新)
     private drawSelection(selection: number) {
         let space = 30;
         // 外枠・背景
