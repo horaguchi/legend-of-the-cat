@@ -74,10 +74,11 @@ export class GameScene extends Phaser.Scene {
     private selectionGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectionTexts: Phaser.GameObjects.Text[];
     private selectionConfirmText: Phaser.GameObjects.Text;
+    private selectionType: string = 'ITEM';
     private selectionContainers: Phaser.GameObjects.Container[];
-    private selectedGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
-    private selectedText: Phaser.GameObjects.Text;
-    private selectedItem: number = -1; // 説明選択用
+    private viewGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
+    private viewText: Phaser.GameObjects.Text;
+    private viewItem: number = -1; // 説明選択用
     private tick: number = 0;
     private statusText: Phaser.GameObjects.Text;
     private pauseText: Phaser.GameObjects.Text;
@@ -165,8 +166,8 @@ export class GameScene extends Phaser.Scene {
         });
 
         // 右側、説明表示用オブジェクトを作成する
-        this.selectedGraphics = this.add.graphics();
-        this.selectedText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
+        this.viewGraphics = this.add.graphics();
+        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
 
         this.drawStatus();
         this.drawPause();
@@ -304,7 +305,7 @@ export class GameScene extends Phaser.Scene {
         this.resolveUnits();
         this.drawStatus();
         this.checkAndEnableConfirmButton();
-        this.drawSelected();
+        this.drawView();
 
         if (this.tick == 3) {
             this.timerState = '▶️';
@@ -372,7 +373,7 @@ export class GameScene extends Phaser.Scene {
                 this.mapX = mapX;
                 this.mapY = mapY;
             }
-            this.selectedItem = -1; // マップをクリックしたらアイテムも未選択にする
+            this.viewItem = -1; // マップをクリックしたらアイテムも未選択にする
             this.checkAndEnableConfirmButton();
         }
         this.drawMap(this.mapX, this.mapY);
@@ -462,8 +463,8 @@ export class GameScene extends Phaser.Scene {
 
     // ステータス下の、既に取得したアイテムを選択(内容確認)
     private clickItem(item: number) {
-        this.selectedItem = (this.selectedItem == item ? -1 : item);
-        this.drawSelected();
+        this.viewItem = (this.viewItem == item ? -1 : item);
+        this.drawView();
     }
 
     // 購入可能か判定
@@ -519,7 +520,7 @@ export class GameScene extends Phaser.Scene {
             this.mapGraphics.strokeRect(this.MAP_OFFSET_X + mapX * this.CELL_SIZE, this.MAP_OFFSET_Y + mapY * this.CELL_SIZE, this.CELL_SIZE, this.CELL_SIZE);
         }
 
-        this.drawSelected();
+        this.drawView();
     }
 
     // シンボルからスペックテキストを取得
@@ -537,7 +538,7 @@ export class GameScene extends Phaser.Scene {
         return symbol + ': ' + spec.name + '\n' + meta + ' / ' + spec.tick +
             (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
     }
-    private getTextFromSpecWithSelected() {
+    private getTextSpecFromMap() {
         let unit = this.unitMap[this.mapY][this.mapX];
         let symbol = unit.symbol;
         let spec = this.UNIT_SPEC[symbol];
@@ -616,20 +617,20 @@ export class GameScene extends Phaser.Scene {
 
     }
     // 右側の説明を描画(選択中はtickごとに更新)
-    private drawSelected() {
-        if ((this.mapX < 0 || this.mapY < 0 || !this.unitMap[this.mapY][this.mapX]) && this.selectedItem < 0) {
-            this.selectedGraphics.clear();
-            this.selectedText.setText(" ");
+    private drawView() {
+        if ((this.mapX < 0 || this.mapY < 0 || !this.unitMap[this.mapY][this.mapX]) && this.viewItem < 0) {
+            this.viewGraphics.clear();
+            this.viewText.setText(" ");
             return;
         }
 
         // 枠線の矩形を描画
         let startX = this.SCREEN_WIDTH - (this.MAP_OFFSET_X - this.CHOICE_WIDTH) / 2 - this.CHOICE_WIDTH;
         let startY = this.cameras.main.centerY - this.CHOICE_HEIGHT / 2;
-        this.selectedGraphics.lineStyle(1, 0x00ffff);
-        this.selectedGraphics.strokeRect(startX, startY, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+        this.viewGraphics.lineStyle(1, 0x00ffff);
+        this.viewGraphics.strokeRect(startX, startY, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
 
-        this.selectedText.setText(0 <= this.selectedItem ? this.getTextFromItemSpec(this.items[this.selectedItem].symbol) : this.getTextFromSpecWithSelected());
-        this.selectedText.setPosition(this.SCREEN_WIDTH - this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
+        this.viewText.setText(0 <= this.viewItem ? this.getTextFromItemSpec(this.items[this.viewItem].symbol) : this.getTextSpecFromMap());
+        this.viewText.setPosition(this.SCREEN_WIDTH - this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
     }
 }
