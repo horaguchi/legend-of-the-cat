@@ -44,7 +44,7 @@ export class GameScene extends Phaser.Scene {
             '🦺': { name: 'Safety Vest', desc: 'aaa', type: "INSTANT", meta1: {} },
             '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
-            '👗': { name: 'Dress', desc: 'aaaaaaa', type: "INSTANT", meta1: {} },
+            '👗': { name: 'Dress', desc: 'aaaaaaa', type: "INSTANT", meta1: { "💎": 1 } },
         };
 
     // TODO:
@@ -154,7 +154,7 @@ export class GameScene extends Phaser.Scene {
         // アイテム表示用テキストの初期化
         this.itemTexts = [];
         for (let i = 0; i < 30; ++i) {
-            this.itemTexts.push(this.add.text(10 + 25 * i, 60, " ").setFontSize(20).setFill('#fff'));
+            this.itemTexts.push(this.add.text(20 + 25 * i, 70, " ").setFontSize(20).setFill('#fff').setOrigin(0.5));
         }
 
         // 配置ボタンの初期化
@@ -329,13 +329,18 @@ export class GameScene extends Phaser.Scene {
             this.timerState = '▶️';
             this.drawStatus();
             this.drawPause();
+            this.startSelection('ITEM');
+        } else if (this.tick == 20) {
+            this.timerState = '▶️';
+            this.drawStatus();
+            this.drawPause();
             this.startSelection('UNIT');
         }
     }
 
     // ユニットの資源生成解決処理
     private resolveUnits() {
-        for (let unit of this.units.GAIN) {
+        for (let unit of this.units["GAIN"]) {
             let spec = this.UNIT_SPEC[unit.symbol];
             if ((this.tick - unit.addTick) % spec.tick == 0) {
                 for (let [key, value] of Object.entries(spec.meta1)) {
@@ -346,7 +351,7 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        for (let unit of this.units.CONVERT) {
+        for (let unit of this.units["CONVERT"]) {
             let spec = this.UNIT_SPEC[unit.symbol];
             if ((this.tick - unit.addTick) % spec.tick == 0) {
                 let convertOK = true;
@@ -460,6 +465,17 @@ export class GameScene extends Phaser.Scene {
         this.drawSelection();
     }
 
+    // アイテム追加時の処理
+    private resolveItem(symbol: string) {
+        let spec = this.ITEM_SPEC[symbol];
+        if (spec.type == "INSTANT") {
+            for (let [key, value] of Object.entries(spec.meta1)) {
+                this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
+            }
+            this.drawStatus();
+        }
+    }
+
     // アイテム選択画面を完了→アイテム・ユニット追加処理
     private clickSelectionConfirm() {
         if (this.selectionType == 'ITEM') {
@@ -474,6 +490,17 @@ export class GameScene extends Phaser.Scene {
             this.itemTexts[i].on("pointerdown", () => {
                 this.clickItem(i);
             });
+            // 追加時のアニメ
+            let tween = this.tweens.add({
+                targets: this.itemTexts[i],
+                duration: 250,
+                scaleX: 1.8,
+                scaleY: 1.8,
+                ease: 'Power1',
+                yoyo: true,
+           });
+           this.resolveItem(this.selections[this.selection]);
+
         } else if (this.selectionType == 'UNIT') {
             if (Object.keys(this.multiSelection).length != 3) {
                 return;
