@@ -377,11 +377,19 @@ export class GameScene extends Phaser.Scene {
     private resolveUnits(): void {
         for (let unit of this.units.GAIN) {
             let spec = this.UNIT_SPEC[unit.symbol];
-            if ((this.tick - unit.baseTick) % spec.tick != 0) {
+            let terrain = this.terrainMap[unit.y][unit.x];
+            let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
+            if ((this.tick - unit.baseTick) % newTick != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
-            for (let [key, value] of Object.entries(spec.meta1)) {
+            let newMeta1 = !terrain ? spec.meta1 : Object.fromEntries(
+                Object.entries(spec.meta1).map(([key, value]) => {
+                    let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                    return [key, newValue];
+                })
+            );
+            for (let [key, value] of Object.entries(newMeta1)) {
                 this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
             }
             // アニメ
@@ -390,21 +398,35 @@ export class GameScene extends Phaser.Scene {
 
         for (let unit of this.units.CONVERT) {
             let spec = this.UNIT_SPEC[unit.symbol];
-            if ((this.tick - unit.baseTick) % spec.tick != 0) {
+            let terrain = this.terrainMap[unit.y][unit.x];
+            let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
+            if ((this.tick - unit.baseTick) % newTick != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
             let convertOK = true;
-            for (let [key, value] of Object.entries(spec.meta1)) {
+            let newMeta1 = !terrain ? spec.meta1 : Object.fromEntries(
+                Object.entries(spec.meta1).map(([key, value]) => {
+                    let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                    return [key, newValue];
+                })
+            );
+            for (let [key, value] of Object.entries(newMeta1)) {
                 if ((this.inventory[key] ?? 0) < Number(value)) {
                     convertOK = false;
                 }
             }
             if (convertOK) {
-                for (let [key, value] of Object.entries(spec.meta1)) {
+                let newMeta2 = !terrain ? spec.meta2 : Object.fromEntries(
+                    Object.entries(spec.meta2).map(([key, value]) => {
+                        let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                        return [key, newValue];
+                    })
+                );
+                for (let [key, value] of Object.entries(newMeta1)) {
                     this.inventory[key] -= Number(value);
                 }
-                for (let [key, value] of Object.entries(spec.meta2)) {
+                for (let [key, value] of Object.entries(newMeta2)) {
                     this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
                 }
                 // アニメ
@@ -669,41 +691,37 @@ export class GameScene extends Phaser.Scene {
             if (!terrain) {
                 meta = '+' + this.getSimpleTextFromObject(spec.meta1);
             } else {
-                let meta1 = Object.fromEntries(
+                let newMeta1 = Object.fromEntries(
                     Object.entries(spec.meta1).map(([key, value]) => {
                         let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
                         return [key, newValue];
                     })
                 );
-                meta = '+' + this.getSimpleTextFromObject(meta1);
+                meta = '+' + this.getSimpleTextFromObject(newMeta1);
             }
         } else if (spec.type == "CONVERT") {
             if (!terrain) {
                 meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
             } else {
-                let meta1 = Object.fromEntries(
+                let newMeta1 = Object.fromEntries(
                     Object.entries(spec.meta1).map(([key, value]) => {
                         let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
                         return [key, newValue];
                     })
                 );
-                let meta2 = Object.fromEntries(
+                let newMeta2 = Object.fromEntries(
                     Object.entries(spec.meta2).map(([key, value]) => {
                         let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
                         return [key, newValue];
                     })
                 );
-                meta = '-' + this.getSimpleTextFromObject(meta1) + '->+' + this.getSimpleTextFromObject(meta2);
+                meta = '-' + this.getSimpleTextFromObject(newMeta1) + '->+' + this.getSimpleTextFromObject(newMeta2);
             }
         }
 
-        if (!terrain) {
-            return symbol + ': ' + spec.name + '\n' + meta + ' / ' + spec.tick +
-                (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
-        } else {
-            return symbol + ': ' + spec.name + '\n' + meta + ' / ' + Math.round(spec.tick * 100 / (100 + terrain.SPEED)) +
-                (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
-        }
+        let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
+        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + newTick +
+            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
     }
     private getTextFromUnitMap(): string {
         let unit = this.unitMap[this.mapY][this.mapX];
