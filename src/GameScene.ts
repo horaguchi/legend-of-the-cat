@@ -1,5 +1,10 @@
 import * as Phaser from 'phaser';
 
+type UnitType = "GAIN" | "CONVERT";
+type ItemType = "INSTANT";
+type SelectionType = "ITEM" | "UNIT";
+type TimerState = "⏸️" | "▶️";
+
 export class GameScene extends Phaser.Scene {
     private readonly SCREEN_WIDTH = 960; // スクリーンの横幅
     private readonly SCREEN_HEIGHT = 540; // スクリーンの縦幅
@@ -16,7 +21,7 @@ export class GameScene extends Phaser.Scene {
         tier: number,
         name: string,
         cost: Record<string, number>,
-        type: string,
+        type: UnitType,
         meta1: Record<string, number>,
         meta2?: Record<string, number>,
         tick: number
@@ -24,19 +29,22 @@ export class GameScene extends Phaser.Scene {
             "😺": { tier: 1, name: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: { "💰": 10, "🌹": 1 }, tick: 10 },
             "😹": { tier: 2, name: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: { "💰": 100 }, tick: 10 },
             "😼": { tier: 3, name: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: { "💰": 1000 }, tick: 10 },
-            "👌": { tier: 1, name: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
             "🤞": { tier: 2, name: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
             "🤟": { tier: 3, name: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
+            "👌": { tier: 1, name: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
         };
     private readonly ITEM_SPEC: Record<string, {
         name: string,
-        desc: string
+        desc: string,
+        type: ItemType,
+        meta1: Record<string, number>,
+        meta2?: Record<string, number>,
     }> = {
-            '👓': { name: 'Glasses', desc: 'gggg' },
-            '🦺': { name: 'Safety Vest', desc: 'aaa' },
-            '👔': { name: 'Necktie', desc: 'aaa' },
-            '🧤': { name: 'Gloves', desc: 'aaaaaaaa' },
-            '👗': { name: 'Dress', desc: 'aaaaaaa' },
+            '👓': { name: 'Glasses', desc: 'gggg', type: "INSTANT", meta1: {} },
+            '🦺': { name: 'Safety Vest', desc: 'aaa', type: "INSTANT", meta1: {} },
+            '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
+            '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
+            '👗': { name: 'Dress', desc: 'aaaaaaa', type: "INSTANT", meta1: {} },
         };
 
     // TODO:
@@ -52,7 +60,7 @@ export class GameScene extends Phaser.Scene {
         x: number,
         y: number
     }[][];
-    private units: Record<string, {
+    private units: Record<UnitType, {
         symbol: string,
         addTick: number,
         x: number,
@@ -84,7 +92,7 @@ export class GameScene extends Phaser.Scene {
     private selectionTexts: Phaser.GameObjects.Text[];
     private selectionConfirmText: Phaser.GameObjects.Text;
     private selectionContainers: Phaser.GameObjects.Container[];
-    private selectionType: string = 'ITEM';
+    private selectionType: SelectionType = 'ITEM';
     private selection: number = -1;
     private multiSelection: Record<number, boolean>;
     private selections: string[] = [
@@ -102,7 +110,7 @@ export class GameScene extends Phaser.Scene {
     private confirmOK: boolean = false;
     private tick: number = 0;
     private inventory: Record<string, number> = { "💰": 100 };
-    private timerState: string = '▶️';
+    private timerState: TimerState = '▶️';
 
     constructor() {
         super("game");
@@ -282,7 +290,7 @@ export class GameScene extends Phaser.Scene {
         this.selectionGroup.add(this.selectionGraphics);
         this.selectionGroup.setAlpha(0);
     }
-    private startSelection(type: string = 'ITEM') {
+    private startSelection(type: SelectionType = 'ITEM') {
         this.selectionType = type;
         if (type == 'ITEM') {
             this.selections = Object.keys(this.ITEM_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, 3);
