@@ -57,13 +57,13 @@ export class GameScene extends Phaser.Scene {
     // ユニットマップデータ
     private unitMap: {
         symbol: string,
-        addTick: number,
+        baseTick: number,
         x: number,
         y: number
     }[][];
     private units: Record<UnitType, {
         symbol: string,
-        addTick: number,
+        baseTick: number,
         x: number,
         y: number
     }[]> = {
@@ -377,34 +377,38 @@ export class GameScene extends Phaser.Scene {
     private resolveUnits(): void {
         for (let unit of this.units.GAIN) {
             let spec = this.UNIT_SPEC[unit.symbol];
-            if ((this.tick - unit.addTick) % spec.tick == 0) {
-                for (let [key, value] of Object.entries(spec.meta1)) {
-                    this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
-                }
-                // アニメ
-                this.textTweenMap[unit.y][unit.x].resume();
+            if ((this.tick - unit.baseTick) % spec.tick != 0) {
+                continue;
             }
+            unit.baseTick = this.tick; // 基点をリセット
+            for (let [key, value] of Object.entries(spec.meta1)) {
+                this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
+            }
+            // アニメ
+            this.textTweenMap[unit.y][unit.x].resume();
         }
 
         for (let unit of this.units.CONVERT) {
             let spec = this.UNIT_SPEC[unit.symbol];
-            if ((this.tick - unit.addTick) % spec.tick == 0) {
-                let convertOK = true;
+            if ((this.tick - unit.baseTick) % spec.tick != 0) {
+                continue;
+            }
+            unit.baseTick = this.tick; // 基点をリセット
+            let convertOK = true;
+            for (let [key, value] of Object.entries(spec.meta1)) {
+                if ((this.inventory[key] ?? 0) < Number(value)) {
+                    convertOK = false;
+                }
+            }
+            if (convertOK) {
                 for (let [key, value] of Object.entries(spec.meta1)) {
-                    if ((this.inventory[key] ?? 0) < Number(value)) {
-                        convertOK = false;
-                    }
+                    this.inventory[key] -= Number(value);
                 }
-                if (convertOK) {
-                    for (let [key, value] of Object.entries(spec.meta1)) {
-                        this.inventory[key] -= Number(value);
-                    }
-                    for (let [key, value] of Object.entries(spec.meta2)) {
-                        this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
-                    }
-                    // アニメ
-                    this.textTweenMap[unit.y][unit.x].resume();
+                for (let [key, value] of Object.entries(spec.meta2)) {
+                    this.inventory[key] = (this.inventory[key] ?? 0) + Number(value);
                 }
+                // アニメ
+                this.textTweenMap[unit.y][unit.x].resume();
             }
         }
     }
@@ -474,7 +478,7 @@ export class GameScene extends Phaser.Scene {
             this.inventory[key] -= Number(value);
         }
 
-        this.unitMap[this.mapY][this.mapX] = { symbol: symbol, addTick: this.tick, x: this.mapX, y: this.mapY };
+        this.unitMap[this.mapY][this.mapX] = { symbol: symbol, baseTick: this.tick, x: this.mapX, y: this.mapY };
         this.textMap[this.mapY][this.mapX].setText(symbol);
         this.units[spec.type].push(this.unitMap[this.mapY][this.mapX]);
         this.checkAndEnableConfirmButton();
@@ -658,23 +662,61 @@ export class GameScene extends Phaser.Scene {
     private getSimpleTextFromObject(obj): string {
         return JSON.stringify(obj).replace(/"/g, '').replace(/([^{,]+):(\d+)/g, '$2$1').replace(/{([^,]+)}/, '$1');
     }
-    private getTextFromUnitSpec(symbol: string, noCost: boolean = false): string {
+    private getTextFromUnitSpec(symbol: string, noCost: boolean = false, terrain: Record<TerrainType, number> = null): string {
         let spec = this.UNIT_SPEC[symbol];
         let meta = '';
         if (spec.type == "GAIN") {
-            meta = '+' + this.getSimpleTextFromObject(spec.meta1);
+            if (!terrain) {
+                meta = '+' + this.getSimpleTextFromObject(spec.meta1);
+            } else {
+                let meta1 = Object.fromEntries(
+                    Object.entries(spec.meta1).map(([key, value]) => {
+                        let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                        return [key, newValue];
+                    })
+                );
+                meta = '+' + this.getSimpleTextFromObject(meta1);
+            }
         } else if (spec.type == "CONVERT") {
-            meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
+            if (!terrain) {
+                meta = '-' + this.getSimpleTextFromObject(spec.meta1) + '->+' + this.getSimpleTextFromObject(spec.meta2);
+            } else {
+                let meta1 = Object.fromEntries(
+                    Object.entries(spec.meta1).map(([key, value]) => {
+                        let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                        return [key, newValue];
+                    })
+                );
+                let meta2 = Object.fromEntries(
+                    Object.entries(spec.meta2).map(([key, value]) => {
+                        let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                        return [key, newValue];
+                    })
+                );
+                meta = '-' + this.getSimpleTextFromObject(meta1) + '->+' + this.getSimpleTextFromObject(meta2);
+            }
         }
-        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + spec.tick +
-            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
+
+        if (!terrain) {
+            return symbol + ': ' + spec.name + '\n' + meta + ' / ' + spec.tick +
+                (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
+        } else {
+            return symbol + ': ' + spec.name + '\n' + meta + ' / ' + Math.round(spec.tick * 100 / (100 + terrain.SPEED)) +
+                (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(spec.cost));
+        }
     }
     private getTextFromUnitMap(): string {
         let unit = this.unitMap[this.mapY][this.mapX];
+        let terrain = this.terrainMap[this.mapY][this.mapX];
         let symbol = unit.symbol;
         let spec = this.UNIT_SPEC[symbol];
 
-        return this.getTextFromUnitSpec(symbol, true) + '\n' + (spec.tick - (this.tick - unit.addTick) % spec.tick);
+        if (!terrain) {
+            return this.getTextFromUnitSpec(symbol, true) + '\n' + (spec.tick - (this.tick - unit.baseTick) % spec.tick);
+        } else {
+            let newTick = Math.round(spec.tick * 100 / (100 + terrain.SPEED));
+            return this.getTextFromUnitSpec(symbol, true, terrain) + '\n' + (newTick - (this.tick - unit.baseTick) % newTick);
+        }
     }
     private getTextFromTerrainMap() {
         let terrain = this.terrainMap[this.mapY][this.mapX];
@@ -773,7 +815,7 @@ export class GameScene extends Phaser.Scene {
         // 枠線の矩形を描画
         let startX = this.SCREEN_WIDTH - (this.MAP_OFFSET_X - this.CHOICE_WIDTH) / 2 - this.CHOICE_WIDTH;
         let startY = this.cameras.main.centerY - this.CHOICE_HEIGHT / 2;
-        this.viewGraphics.lineStyle(1, this.unitMap[this.mapY][this.mapX] ? 0x00ffff : 0xffff00);
+        this.viewGraphics.lineStyle(1, this.unitMap[this.mapY][this.mapX] ? 0x00ffff : 0xffffff);
         this.viewGraphics.strokeRect(startX, startY, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
         if (0 <= this.viewItem) {
             this.viewText.setText(this.getTextFromItemSpec(this.items[this.viewItem].symbol));

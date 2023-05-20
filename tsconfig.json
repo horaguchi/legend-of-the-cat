@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "target": "es5",
-        "lib": ["es2017","dom"], // for Object.entries, console.log
+        "lib": ["es2019","dom"], // for Object.entries, console.log
         "moduleResolution": "node"
     },
     "include": [
