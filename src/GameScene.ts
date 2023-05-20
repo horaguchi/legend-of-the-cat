@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 
 type UnitType = "GAIN" | "CONVERT";
-type ItemType = "INSTANT";
+type ItemType = "INSTANT" | "VICTORY";
 type TerrainType = "AMOUNT" | "SPEED";
 type SelectionType = "ITEM" | "UNIT";
 type TimerState = "⏸️" | "▶️";
@@ -34,6 +34,16 @@ export class GameScene extends Phaser.Scene {
             "🤟": { tier: 3, name: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
             "👌": { tier: 1, name: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
         };
+    // UNIT アイデア
+    // リソースアイデア
+    // お金 - お金を生み出す
+    // 宝石 - あまり生まれないが、特定のリソースに必要
+    // 歯車 - まり生まれないが、特定のリソースに必要
+    // 石 - 単純にお金よりたくさん生まれる
+    // ユニットをおけるかず
+    //
+    // 種類アイデア
+    // terrain をバフするユニット
     private readonly ITEM_SPEC: Record<string, {
         name: string,
         desc: string,
@@ -46,14 +56,12 @@ export class GameScene extends Phaser.Scene {
             '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
             '👗': { name: 'Dress', desc: 'aaaaaaa', type: "INSTANT", meta1: { "💎": 1 } },
+            '🤑': { name: 'Feeling rich', desc: 'After saving 200💰, you win!', type: "VICTORY", meta1: { '💰': 200 } }
         };
 
     // TODO:
-    // GAIN 
-    // CONVERT
-    // BUFF_SPEED
-    // BUFF_AMOUNT
-
+    // 勝利条件アイテム
+    // 
     // ユニットマップデータ
     private unitMap: {
         symbol: string,
@@ -105,6 +113,7 @@ export class GameScene extends Phaser.Scene {
     private viewGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private viewText: Phaser.GameObjects.Text;
     private viewItem: number = -1; // 説明選択用
+    private victoryGroup: Phaser.GameObjects.Group;
     private statusText: Phaser.GameObjects.Text;
     private pauseText: Phaser.GameObjects.Text;
     private pauseTween: Phaser.Tweens.Tween;
@@ -113,6 +122,7 @@ export class GameScene extends Phaser.Scene {
     private tick: number = 0;
     private inventory: Record<string, number> = { "💰": 100 };
     private timerState: TimerState = '▶️';
+    private victory: boolean = false;
 
     constructor() {
         super("game");
@@ -206,7 +216,7 @@ export class GameScene extends Phaser.Scene {
             this.terrainMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 // 初期地形ランダム
-                if (Math.random() < 0.1) {
+                if (Math.random() < 0.05) {
                     let obj = {};
                     let value: number;
                     if (Math.random() < 0.05) { // 5%
@@ -344,6 +354,17 @@ export class GameScene extends Phaser.Scene {
             alpha: 1
         });
     }
+    private startVictory(): void {
+        if (!this.victoryGroup) {
+            this.createAndDrawVictory();
+        }
+        this.tweens.add({
+            targets: this.victoryGroup.getChildren(),
+            duration: 250,
+            ease: 'Power1',
+            alpha: 1
+        });
+    }
 
     update(): void {
         this.tweens.update();
@@ -356,11 +377,16 @@ export class GameScene extends Phaser.Scene {
         }
         this.tick++;
         this.resolveUnits();
+        this.resolveItems();
         this.drawStatus();
         this.checkAndEnableConfirmButton();
         this.drawView();
-
-        if (this.tick == 3) {
+        if (this.victory) {
+            this.timerState = '▶️';
+            this.drawStatus();
+            this.drawPause();
+            this.startVictory();
+        } else if (this.tick == 3) {
             this.timerState = '▶️';
             this.drawStatus();
             this.drawPause();
@@ -373,7 +399,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    // ユニットの資源生成解決処理
+    // ユニットの毎ターン解決処理
     private resolveUnits(): void {
         for (let unit of this.units.GAIN) {
             let spec = this.UNIT_SPEC[unit.symbol];
@@ -431,6 +457,24 @@ export class GameScene extends Phaser.Scene {
                 }
                 // アニメ
                 this.textTweenMap[unit.y][unit.x].resume();
+            }
+        }
+    }
+
+    // アイテムの毎ターン解決処理
+    private resolveItems(): void {
+        for (let item of this.items) {
+            let spec = this.ITEM_SPEC[item.symbol];
+            if (spec.type == 'VICTORY') {
+                let victoryOK = true;
+                for (let [key, value] of Object.entries(spec.meta1)) {
+                    if ((this.inventory[key] ?? 0) < Number(value)) {
+                        victoryOK = false;
+                    }
+                }
+                if (victoryOK) {
+                    this.victory = true;
+                }
             }
         }
     }
@@ -527,7 +571,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // アイテム追加時の処理
-    private resolveItem(symbol: string): void {
+    private resolveAcquiredItem(symbol: string): void {
         let spec = this.ITEM_SPEC[symbol];
         if (spec.type == "INSTANT") {
             for (let [key, value] of Object.entries(spec.meta1)) {
@@ -560,7 +604,7 @@ export class GameScene extends Phaser.Scene {
                 ease: 'Power1',
                 yoyo: true,
             });
-            this.resolveItem(this.selections[this.selection]);
+            this.resolveAcquiredItem(this.selections[this.selection]);
 
         } else if (this.selectionType == 'UNIT') {
             if (Object.keys(this.multiSelection).length != 3) {
@@ -820,7 +864,23 @@ export class GameScene extends Phaser.Scene {
             // クリッカブルを配置
             this.selectionContainers[i].setPosition(x, y);
         }
+    }
+    // 勝利画面描画
+    private createAndDrawVictory() {
+        this.victoryGroup = this.add.group();
+        let vicotryGraphics = this.add.graphics();
+        let space = 30;
+        // 外枠・背景
+        vicotryGraphics.fillStyle(0xffffff, 1);
+        vicotryGraphics.fillRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
+        vicotryGraphics.lineStyle(1, 0xffffff);
+        vicotryGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
 
+        let victoryText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + space, "VICTORY").setFontSize(80).setFill('#000').setOrigin(0.5).setAlign('center').setLineSpacing(5)
+
+        this.victoryGroup.add(vicotryGraphics);
+        this.victoryGroup.add(victoryText);
+        this.victoryGroup.setAlpha(0);
     }
     // 右側の説明を描画(選択中はtickごとに更新)
     private drawView() {
