@@ -70,15 +70,12 @@ export class GameScene extends Phaser.Scene {
         x: number,
         y: number
     }[][];
-    private units: Record<UnitType, {
+    private units: {
         symbol: string,
         baseTick: number,
         x: number,
         y: number
-    }[]> = {
-            "GAIN": [],
-            "CONVERT": [],
-        };
+    }[] = [];
     private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
     private textTweenMap: Phaser.Tweens.Tween[][]; // 表示用テキストアニメマップデータ
     private terrainMap: Record<TerrainType, number>[][];
@@ -103,6 +100,7 @@ export class GameScene extends Phaser.Scene {
     private selectionTexts: Phaser.GameObjects.Text[];
     private selectionConfirmText: Phaser.GameObjects.Text;
     private selectionContainers: Phaser.GameObjects.Container[];
+    private selectionConfirmContainer: Phaser.GameObjects.Container;
     private selectionType: SelectionType = 'ITEM';
     private selection: number = -1;
     private multiSelection: Record<number, boolean>;
@@ -119,6 +117,7 @@ export class GameScene extends Phaser.Scene {
     private pauseText: Phaser.GameObjects.Text;
     private pauseTween: Phaser.Tweens.Tween;
     private confirmText: Phaser.GameObjects.Text;
+    private confirmGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private confirmOK: boolean = false;
     private tick: number = 0;
     private inventory: Record<string, number> = { "💰": 100 };
@@ -171,12 +170,20 @@ export class GameScene extends Phaser.Scene {
         }
 
         // 配置ボタンの初期化
-        this.confirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999');
-        this.confirmText.setInteractive({ useHandCursor: true });
-        this.confirmText.setOrigin(0.5);
-        this.confirmText.on('pointerdown', () => {
+        this.confirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999').setOrigin(0.5);
+        this.confirmGraphics = this.add.graphics();
+        this.confirmGraphics.lineStyle(1, 0x909090);
+        this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2 - 20, 400, 40);
+        let confirmContainer = this.add.container(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2);
+        confirmContainer.setSize(400, 40);
+        confirmContainer.setInteractive({ useHandCursor: true });
+        confirmContainer.on('pointerdown', () => {
             this.clickConfirm();
         });
+
+        // 右側、説明表示用オブジェクトを作成する
+        this.viewGraphics = this.add.graphics();
+        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
 
         // タイマーイベントを設定する
         const timer = this.time.addEvent({
@@ -185,10 +192,6 @@ export class GameScene extends Phaser.Scene {
             callbackScope: this,
             loop: true // 繰り返し実行
         });
-
-        // 右側、説明表示用オブジェクトを作成する
-        this.viewGraphics = this.add.graphics();
-        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
 
         this.drawStatus();
         this.drawPause();
@@ -282,31 +285,24 @@ export class GameScene extends Phaser.Scene {
         }
     }
     private createChoice(): void {
-        // 枠線のスタイルを設定
         this.choiceGraphics = this.add.graphics();
         this.choiceTexts = [];
+        let ys = [
+            this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE,
+            this.cameras.main.centerY,
+            this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE,
+        ];
         for (let i = 0; i < 3; ++i) {
+            // テキストの追加
             this.choiceTexts.push(this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
+
+            // クリッカブル要素を追加
+            let choiceContainer = this.add.container(this.MAP_OFFSET_X / 2, ys[i]).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+            choiceContainer.setInteractive({ useHandCursor: true });
+            choiceContainer.on("pointerdown", () => {
+                this.clickChoice(i);
+            });
         }
-        // クリッカブル要素を追加
-        let choiceContainer1 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY - this.CHOICE_HEIGHT - this.CHOICE_SPACE);
-        choiceContainer1.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-        choiceContainer1.setInteractive({ useHandCursor: true });
-        choiceContainer1.on("pointerdown", () => {
-            this.clickChoice(0);
-        });
-        let choiceContainer2 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
-        choiceContainer2.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-        choiceContainer2.setInteractive({ useHandCursor: true });
-        choiceContainer2.on("pointerdown", () => {
-            this.clickChoice(1);
-        });
-        let choiceContainer3 = this.add.container(this.MAP_OFFSET_X / 2, this.cameras.main.centerY + this.CHOICE_HEIGHT + this.CHOICE_SPACE);
-        choiceContainer3.setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
-        choiceContainer3.setInteractive({ useHandCursor: true });
-        choiceContainer3.on("pointerdown", () => {
-            this.clickChoice(2);
-        });
     }
     private createSelection(): void {
         this.selectionGroup = this.add.group();
@@ -314,11 +310,11 @@ export class GameScene extends Phaser.Scene {
         this.selectionTexts = [];
         this.selectionContainers = [];
         for (let i = 0; i < 9; ++i) {
+            // テキストの追加
             this.selectionTexts.push(this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
 
             // クリッカブル要素を追加
-            this.selectionContainers.push(this.add.container(1000, 1000));
-            this.selectionContainers[i].setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
+            this.selectionContainers.push(this.add.container(1000, 1000).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT));
             this.selectionContainers[i].setInteractive({ useHandCursor: true });
             this.selectionContainers[i].on("pointerdown", () => {
                 this.clickSelection(i);
@@ -328,8 +324,9 @@ export class GameScene extends Phaser.Scene {
             this.selectionGroup.add(text);
         }
         this.selectionConfirmText = this.add.text(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2, "Choose 1 item").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
-        this.selectionConfirmText.setInteractive({ useHandCursor: true });
-        this.selectionConfirmText.on("pointerdown", () => {
+        this.selectionConfirmContainer = this.add.container(1000, 1000).setSize(400, 40);
+        this.selectionConfirmContainer.setInteractive({ useHandCursor: true });
+        this.selectionConfirmContainer.on("pointerdown", () => {
             this.clickSelectionConfirm();
         });
         this.selectionGroup.add(this.selectionConfirmText);
@@ -402,16 +399,12 @@ export class GameScene extends Phaser.Scene {
 
     // 量計算処理
     private getMetaByCalc(meta: Record<string, number>, terrain: Record<TerrainType, number> = null): Record<string, number> {
-        if (!terrain) {
-            return meta;
-        } else {
-            return Object.fromEntries(
-                Object.entries(meta).map(([key, value]) => {
-                    let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
-                    return [key, newValue];
-                })
-            );
-        }
+        return terrain ? Object.fromEntries(
+            Object.entries(meta).map(([key, value]) => {
+                let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                return [key, newValue];
+            })
+        ) : meta;
     }
     // スピード計算処理(1より小さくはならない)
     private getTickByCalc(tick: number, terrain: Record<TerrainType, number> = null): number {
@@ -419,44 +412,40 @@ export class GameScene extends Phaser.Scene {
     }
     // ユニットの毎ターン解決処理
     private resolveUnits(): void {
-        for (let unit of this.units.GAIN) {
+        for (let unit of this.units) {
             let spec = this.UNIT_SPEC[unit.symbol];
             let terrain = this.terrainMap[unit.y][unit.x];
+            if (spec.type != "GAIN" && spec.type != "CONVERT") {
+                continue;
+            }
             if ((this.tick - unit.baseTick) % this.getTickByCalc(spec.tick, terrain) != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
-            for (let [key, value] of Object.entries(this.getMetaByCalc(spec.meta1, terrain))) {
-                this.inventory[key] = (this.inventory[key] ?? 0) + value;
-            }
-            // アニメ
-            this.textTweenMap[unit.y][unit.x].resume();
-        }
-
-        for (let unit of this.units.CONVERT) {
-            let spec = this.UNIT_SPEC[unit.symbol];
-            let terrain = this.terrainMap[unit.y][unit.x];
-            if ((this.tick - unit.baseTick) % this.getTickByCalc(spec.tick, terrain) != 0) {
-                continue;
-            }
-            unit.baseTick = this.tick; // 基点をリセット
-            let convertOK = true;
-            let newMeta1 = this.getMetaByCalc(spec.meta1, terrain);
-            for (let [key, value] of Object.entries(newMeta1)) {
-                if ((this.inventory[key] ?? 0) < value) {
-                    convertOK = false;
+            if (spec.type == "GAIN") {
+                for (let [key, value] of Object.entries(this.getMetaByCalc(spec.meta1, terrain))) {
+                    this.inventory[key] = (this.inventory[key] ?? 0) + value;
                 }
-            }
-            if (convertOK) {
+            } else if (spec.type == "CONVERT") {
+                let convertOK = true;
+                let newMeta1 = this.getMetaByCalc(spec.meta1, terrain);
+                for (let [key, value] of Object.entries(newMeta1)) {
+                    if ((this.inventory[key] ?? 0) < value) {
+                        convertOK = false;
+                    }
+                }
+                if (!convertOK) {
+                    continue;
+                }
                 for (let [key, value] of Object.entries(newMeta1)) {
                     this.inventory[key] -= value;
                 }
                 for (let [key, value] of Object.entries(this.getMetaByCalc(spec.meta2, terrain))) {
                     this.inventory[key] = (this.inventory[key] ?? 0) + value;
                 }
-                // アニメ
-                this.textTweenMap[unit.y][unit.x].resume();
             }
+            // アニメ
+            this.textTweenMap[unit.y][unit.x].resume();
         }
     }
 
@@ -475,6 +464,18 @@ export class GameScene extends Phaser.Scene {
                     this.victory = true;
                 }
             }
+        }
+    }
+
+    // アイテム追加時の処理(各アイテム毎1回のみ)
+    private resolveAcquiredItem(symbol: string): void {
+        let spec = this.ITEM_SPEC[symbol];
+        if (spec.type == "INSTANT") {
+            for (let [key, value] of Object.entries(spec.meta1)) {
+                this.inventory[key] = (this.inventory[key] ?? 0) + value;
+            }
+            this.drawStatus();
+            this.drawChoice(this.choice);
         }
     }
 
@@ -521,19 +522,21 @@ export class GameScene extends Phaser.Scene {
     private checkAndEnableConfirmButton(): void {
         if (this.choice != -1 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX] && this.checkPurchasable()) {
             this.confirmText.setFill('#ff0');
+            this.confirmGraphics.lineStyle(1, 0xffff00);
+            this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2 - 20, 400, 40);    
             this.confirmOK = true;
         } else {
             this.confirmText.setFill('#999');
+            this.confirmGraphics.lineStyle(1, 0x909090);
+            this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2 - 20, 400, 40);    
             this.confirmOK = false;
         }
     }
 
     // 配置ボタン押下→ユニットの作成処理
     private clickConfirm(): void {
+        console.log('clickConfirm');
         if (!this.confirmOK) {
-            return;
-        }
-        if (!this.checkPurchasable()) { // 買えない限り押せるようにはなってないはずだが…
             return;
         }
 
@@ -545,7 +548,7 @@ export class GameScene extends Phaser.Scene {
 
         this.unitMap[this.mapY][this.mapX] = { symbol: symbol, baseTick: this.tick, x: this.mapX, y: this.mapY };
         this.textMap[this.mapY][this.mapX].setText(symbol);
-        this.units[spec.type].push(this.unitMap[this.mapY][this.mapX]);
+        this.units.push(this.unitMap[this.mapY][this.mapX]);
         this.checkAndEnableConfirmButton();
         this.drawStatus();
         this.drawMap(this.mapX, this.mapY);
@@ -569,20 +572,9 @@ export class GameScene extends Phaser.Scene {
         this.drawSelection();
     }
 
-    // アイテム追加時の処理
-    private resolveAcquiredItem(symbol: string): void {
-        let spec = this.ITEM_SPEC[symbol];
-        if (spec.type == "INSTANT") {
-            for (let [key, value] of Object.entries(spec.meta1)) {
-                this.inventory[key] = (this.inventory[key] ?? 0) + value;
-            }
-            this.drawStatus();
-            this.drawChoice(this.choice);
-        }
-    }
-
     // アイテム選択画面を完了→アイテム・ユニット追加処理
     private clickSelectionConfirm(): void {
+        console.log('clickSelectionConfirm');
         if (this.selectionType == 'ITEM') {
             if (this.selection == -1) {
                 return;
@@ -620,6 +612,7 @@ export class GameScene extends Phaser.Scene {
             this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
             this.selectionContainers[i].setPosition(1000, 1000);
         }
+        this.selectionConfirmContainer.setPosition(1000, 1000);
         this.tweens.add({
             targets: this.selectionGroup.getChildren(),
             duration: 250,
@@ -746,7 +739,7 @@ export class GameScene extends Phaser.Scene {
             meta = '-' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
                 '->+' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta2, terrain));
         }
-        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + this.getTickByCalc(spec.tick) +
+        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + this.getTickByCalc(spec.tick, terrain) +
             (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)));
     }
     private getTextFromUnitMap(): string {
@@ -754,13 +747,8 @@ export class GameScene extends Phaser.Scene {
         let terrain = this.terrainMap[this.mapY][this.mapX];
         let symbol = unit.symbol;
         let spec = this.UNIT_SPEC[symbol];
-
-        if (!terrain) {
-            return this.getTextFromUnitSpec(symbol, true) + '\n' + (spec.tick - (this.tick - unit.baseTick) % spec.tick);
-        } else {
-            let newTick = this.getTickByCalc(spec.tick, terrain);
-            return this.getTextFromUnitSpec(symbol, true, terrain) + '\n' + (newTick - (this.tick - unit.baseTick) % newTick);
-        }
+        let newTick = this.getTickByCalc(spec.tick, terrain);
+        return this.getTextFromUnitSpec(symbol, true, terrain) + '\n' + (newTick - (this.tick - unit.baseTick) % newTick);
     }
     private getTextFromTerrainMap() {
         let terrain = this.terrainMap[this.mapY][this.mapX];
@@ -833,7 +821,6 @@ export class GameScene extends Phaser.Scene {
                 this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
                 // テキストを描画
                 this.selectionTexts[i].setPosition(x, y).setText(this.getTextFromItemSpec(this.selections[i]));
-                this.selectionConfirmText.setFill(selection == -1 ? '#999' : '#ff0');
             } else if (this.selectionType == 'UNIT') {
                 let multiSelection = this.multiSelection;
                 // 矩形を描画
@@ -841,10 +828,21 @@ export class GameScene extends Phaser.Scene {
                 this.selectionGraphics.strokeRect(x - this.CHOICE_WIDTH / 2, y - this.CHOICE_HEIGHT / 2, this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
                 // テキストを描画
                 this.selectionTexts[i].setPosition(x, y).setText(this.getTextFromUnitSpec(this.selections[i]));
-                this.selectionConfirmText.setFill(Object.keys(multiSelection).length != 3 ? '#999' : '#ff0');
             }
             // クリッカブルを配置
             this.selectionContainers[i].setPosition(x, y);
+        }
+        // 確定ボタンの活性
+        if (this.selectionType == 'ITEM') {
+            this.selectionConfirmText.setFill(this.selection == -1 ? '#999' : '#ff0');
+            this.selectionConfirmContainer.setPosition(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2);
+            this.selectionGraphics.lineStyle(1, this.selection == -1 ? 0x909090 : 0xffff00);
+            this.selectionGraphics.strokeRect(this.cameras.main.centerX - 200, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2 - 20, 400, 40);        
+        } else if (this.selectionType == 'UNIT') {
+            this.selectionConfirmText.setFill(Object.keys(this.multiSelection).length != 3 ? '#999' : '#ff0');
+            this.selectionConfirmContainer.setPosition(this.cameras.main.centerX, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2);
+            this.selectionGraphics.lineStyle(1, Object.keys(this.multiSelection).length != 3 ? 0x909090 : 0xffff00);
+            this.selectionGraphics.strokeRect(this.cameras.main.centerX - 200, this.SCREEN_HEIGHT - this.MAP_OFFSET_Y / 2 - 20, 400, 40);        
         }
     }
     // 勝利画面描画
