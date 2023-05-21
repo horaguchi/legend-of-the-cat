@@ -468,7 +468,6 @@ export class GameScene extends Phaser.Scene {
                 if (targetX < 0 || this.MAP_WIDTH <= targetX || targetY < 0 || this.MAP_HEIGHT <= targetY) {
                     continue;
                 }
-                console.log(targetX, targetY);
                 let newTerrain: Record<TerrainType, number> = { AMOUNT: 0, SPEED: 0 };
                 this.terrainMap[targetY][targetX] = (this.terrainMap[targetY][targetX] || { AMOUNT: 0, SPEED: 0 });
                 this.terrainMap[targetY][targetX].AMOUNT += newMeta2['💪'] ?? 0;
@@ -563,7 +562,7 @@ export class GameScene extends Phaser.Scene {
 
     // 配置ボタン押下→ユニットの作成処理
     private clickConfirm(): void {
-        console.log('clickConfirm');
+        //console.log('clickConfirm');
         if (!this.confirmOK) {
             return;
         }
@@ -603,7 +602,7 @@ export class GameScene extends Phaser.Scene {
 
     // アイテム選択画面を完了→アイテム追加・ユニット交換処理
     private clickSelectionConfirm(): void {
-        console.log('clickSelectionConfirm');
+        //console.log('clickSelectionConfirm');
         if (this.selectionType == 'ITEM') {
             if (this.selection == -1) {
                 return;
@@ -702,29 +701,11 @@ export class GameScene extends Phaser.Scene {
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 if (this.terrainMap[y][x]) {
                     let value = this.terrainMap[y][x].AMOUNT + this.terrainMap[y][x].SPEED;
-                    let color;
-                    if (value < -100) {
-                        color = 0xff0000;
-                    } else if (value < -75) {
-                        color = 0xcc0000;
-                    } else if (value < -50) {
-                        color = 0x990000;
-                    } else if (value < -25) {
-                        color = 0x660000;
-                    } else if (value < 0) {
-                        color = 0x330000;
-                    } else if (value == 0) {
-                        color = 0x000000;
-                    } else if (value < 25) {
-                        color = 0x003300;
-                    } else if (value < 50) {
-                        color = 0x006600;
-                    } else if (value < 75) {
-                        color = 0x009900;
-                    } else if (value < 100) {
-                        color = 0x00cc00;
-                    } else if (100 <= value) {
-                        color = 0x00ff00;
+                    let color = 0x000000;
+                    if (value < 0) {
+                        color = Math.min(0x010000 * Math.abs(value) * 3, 0xff0000);
+                    } else if (0 < value) {
+                        color = Math.min(0x000100 * value * 3, 0x00ff00);
                     }
                     this.mapGraphics.fillStyle(color);
                     this.mapGraphics.fillRect(this.MAP_OFFSET_X + x * this.CELL_SIZE, this.MAP_OFFSET_Y + y * this.CELL_SIZE, this.CELL_SIZE, this.CELL_SIZE);
