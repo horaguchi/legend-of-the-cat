@@ -401,7 +401,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 量計算処理
-    private getMetaByCalc(meta: Record<string, number>, terrain: Record<TerrainType, number> = null) {
+    private getMetaByCalc(meta: Record<string, number>, terrain: Record<TerrainType, number> = null): Record<string, number> {
         if (!terrain) {
             return meta;
         } else {
@@ -413,13 +413,16 @@ export class GameScene extends Phaser.Scene {
             );
         }
     }
+    // スピード計算処理(1より小さくはならない)
+    private getTickByCalc(tick: number, terrain: Record<TerrainType, number> = null): number {
+        return Math.max(1, (terrain ? Math.round(tick * 100 / (100 + terrain.SPEED)) : tick));
+    }
     // ユニットの毎ターン解決処理
     private resolveUnits(): void {
         for (let unit of this.units.GAIN) {
             let spec = this.UNIT_SPEC[unit.symbol];
             let terrain = this.terrainMap[unit.y][unit.x];
-            let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
-            if ((this.tick - unit.baseTick) % newTick != 0) {
+            if ((this.tick - unit.baseTick) % this.getTickByCalc(spec.tick, terrain) != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
@@ -433,8 +436,7 @@ export class GameScene extends Phaser.Scene {
         for (let unit of this.units.CONVERT) {
             let spec = this.UNIT_SPEC[unit.symbol];
             let terrain = this.terrainMap[unit.y][unit.x];
-            let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
-            if ((this.tick - unit.baseTick) % newTick != 0) {
+            if ((this.tick - unit.baseTick) % this.getTickByCalc(spec.tick, terrain) != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
@@ -537,8 +539,8 @@ export class GameScene extends Phaser.Scene {
 
         let symbol = this.choices[this.choice];
         let spec = this.UNIT_SPEC[symbol];
-        for (let [key, value] of Object.entries(spec.cost)) {
-            this.inventory[key] -= this.getCostByCalc(value);
+        for (let [key, value] of Object.entries(this.getCostByCalc(spec.cost))) {
+            this.inventory[key] -= value;
         }
 
         this.unitMap[this.mapY][this.mapX] = { symbol: symbol, baseTick: this.tick, x: this.mapX, y: this.mapY };
@@ -633,9 +635,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     // コスト計算、1は下回らない
-    private getCostByCalc(value: number) {
-        let newValue = Math.max(1, Math.round(value * (10 - (this.inventory['🎫'] ?? 0)) / 10) );
-        return newValue;
+    private getCostByCalc(cost: Record<string, number>): Record<string, number> {
+        return Object.fromEntries(
+            Object.entries(cost).map(([key, value]) => {
+                let newValue = Math.max(1, Math.round(value * (10 - (this.inventory['🎫'] ?? 0)) / 10));
+                return [key, newValue];
+            })
+        );
     }
     // 購入可能か判定
     private checkPurchasable(): boolean {
@@ -643,8 +649,8 @@ export class GameScene extends Phaser.Scene {
         let spec = this.UNIT_SPEC[symbol];
 
         let purchaseOK = true;
-        for (let [key, value] of Object.entries(spec.cost)) {
-            if ((this.inventory[key] ?? 0) < this.getCostByCalc(value)) {
+        for (let [key, value] of Object.entries(this.getCostByCalc(spec.cost))) {
+            if ((this.inventory[key] ?? 0) < value) {
                 purchaseOK = false;
             }
         }
@@ -737,19 +743,11 @@ export class GameScene extends Phaser.Scene {
         if (spec.type == "GAIN") {
             meta = '+' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain));
         } else if (spec.type == "CONVERT") {
-            meta = '-' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) + 
+            meta = '-' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
                 '->+' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta2, terrain));
         }
-
-        let newTick = terrain ? Math.round(spec.tick * 100 / (100 + terrain.SPEED)) : spec.tick;
-        let newCost = Object.fromEntries(
-            Object.entries(spec.cost).map(([key, value]) => {
-                let newValue = this.getCostByCalc(value);
-                return [key, newValue];
-            })
-        );
-        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + newTick +
-            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(newCost));
+        return symbol + ': ' + spec.name + '\n' + meta + ' / ' + this.getTickByCalc(spec.tick) +
+            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)));
     }
     private getTextFromUnitMap(): string {
         let unit = this.unitMap[this.mapY][this.mapX];
@@ -760,7 +758,7 @@ export class GameScene extends Phaser.Scene {
         if (!terrain) {
             return this.getTextFromUnitSpec(symbol, true) + '\n' + (spec.tick - (this.tick - unit.baseTick) % spec.tick);
         } else {
-            let newTick = Math.round(spec.tick * 100 / (100 + terrain.SPEED));
+            let newTick = this.getTickByCalc(spec.tick, terrain);
             return this.getTextFromUnitSpec(symbol, true, terrain) + '\n' + (newTick - (this.tick - unit.baseTick) % newTick);
         }
     }
