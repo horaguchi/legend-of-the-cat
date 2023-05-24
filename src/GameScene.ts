@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 
 type UnitType = "GAIN" | "CONVERT" | "TERRAIN";
 type ItemType = "INSTANT" | "VICTORY";
-type TerrainType = "AMOUNT" | "SPEED";
+type TerrainType = "💪" | "⏱";
 type SelectionType = "ITEM" | "UNIT";
 type TimerState = "⏸️" | "▶️";
 
@@ -43,9 +43,6 @@ export class GameScene extends Phaser.Scene {
     // 歯車 - まり生まれないが、特定のリソースに必要
     // 石 - 単純にお金よりたくさん生まれる
     // ユニットをおけるかず
-    //
-    // 種類アイデア
-    // terrain をバフするユニット
     private readonly ITEM_SPEC: Record<string, {
         name: string,
         desc: string,
@@ -240,10 +237,10 @@ export class GameScene extends Phaser.Scene {
                     } else if (Math.random() < 1.0) { // 5%
                         value = -50;
                     }
-                    let key: TerrainType = (Math.random() < 0.5 ? "AMOUNT" : "SPEED");
+                    let key: TerrainType = (Math.random() < 0.5 ? "💪" : "⏱");
                     this.terrainMap[y][x] = {
-                        "AMOUNT": key == "AMOUNT" ? value : 0,
-                        "SPEED": key == "SPEED" ? value : 0,
+                        "💪": key == "💪" ? value : 0,
+                        "⏱": key == "⏱" ? value : 0,
                     };
                 } else {
                     this.terrainMap[y][x] = null;
@@ -405,14 +402,14 @@ export class GameScene extends Phaser.Scene {
     private getMetaByCalc(meta: Record<string, number>, terrain: Record<TerrainType, number> = null): Record<string, number> {
         return terrain ? Object.fromEntries(
             Object.entries(meta).map(([key, value]) => {
-                let newValue = Math.round(value * (100 + terrain.AMOUNT) / 100);
+                let newValue = Math.round(value * (100 + terrain['💪']) / 100);
                 return [key, newValue];
             })
         ) : meta;
     }
     // スピード計算処理(1より小さくはならない)
     private getTickByCalc(tick: number, terrain: Record<TerrainType, number> = null): number {
-        return Math.max(1, (terrain ? Math.round(tick * 100 / (100 + terrain.SPEED)) : tick));
+        return Math.max(1, (terrain ? Math.round(tick * 100 / (100 + terrain['⏱'])) : tick));
     }
     // ユニットの毎ターン解決処理
     private resolveUnits(): void {
@@ -468,10 +465,10 @@ export class GameScene extends Phaser.Scene {
                 if (targetX < 0 || this.MAP_WIDTH <= targetX || targetY < 0 || this.MAP_HEIGHT <= targetY) {
                     continue;
                 }
-                let newTerrain: Record<TerrainType, number> = { AMOUNT: 0, SPEED: 0 };
-                this.terrainMap[targetY][targetX] = (this.terrainMap[targetY][targetX] || { AMOUNT: 0, SPEED: 0 });
-                this.terrainMap[targetY][targetX].AMOUNT += newMeta2['💪'] ?? 0;
-                this.terrainMap[targetY][targetX].SPEED += newMeta2['⏱'] ?? 0;
+                let newTerrain: Record<TerrainType, number> = { '💪': 0, '⏱': 0 };
+                this.terrainMap[targetY][targetX] = (this.terrainMap[targetY][targetX] || { '💪': 0, '⏱': 0 });
+                this.terrainMap[targetY][targetX]['💪'] += newMeta2['💪'] ?? 0;
+                this.terrainMap[targetY][targetX]['⏱'] += newMeta2['⏱'] ?? 0;
             }
             this.drawMap();
         }
@@ -700,7 +697,7 @@ export class GameScene extends Phaser.Scene {
         for (let y = 0; y < this.MAP_HEIGHT; y++) {
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 if (this.terrainMap[y][x]) {
-                    let value = this.terrainMap[y][x].AMOUNT + this.terrainMap[y][x].SPEED;
+                    let value = this.terrainMap[y][x]['💪'] + this.terrainMap[y][x]['⏱'];
                     let color = 0x000000;
                     if (value < 0) {
                         color = Math.min(0x010000 * Math.abs(value) * 3, 0xff0000);
@@ -772,7 +769,7 @@ export class GameScene extends Phaser.Scene {
     }
     private getTextFromTerrainMap() {
         let terrain = this.terrainMap[this.mapY][this.mapX];
-        return (terrain.AMOUNT >= 0 ? '+' : '') + terrain.AMOUNT + '%💪 / ' + (terrain.SPEED >= 0 ? '+' : '') + terrain.SPEED + '%⏱';
+        return (terrain['💪'] >= 0 ? '+' : '') + terrain['💪'] + '%💪 / ' + (terrain['⏱'] >= 0 ? '+' : '') + terrain['⏱'] + '%⏱';
     }
     private getTextFromItemSpec(symbol: string): string {
         let spec = this.ITEM_SPEC[symbol];
