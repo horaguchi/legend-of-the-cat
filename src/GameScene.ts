@@ -22,19 +22,29 @@ export class GameScene extends Phaser.Scene {
         tier: number,
         name: string,
         cost: Record<string, number>,
+        require?: Record<string, number>,
         type: UnitType,
         meta1: Record<string, number>,
         meta2?: Record<string, number>,
         tick?: number
     }> = {
-            "😺": { tier: 1, name: "T1 Cat", cost: { "💰": 10 }, type: "GAIN", meta1: { "💰": 10, "🌹": 1 }, tick: 10 },
-            "😹": { tier: 2, name: "T2 Cat", cost: { "💰": 200 }, type: "GAIN", meta1: { "💰": 100 }, tick: 10 },
-            "😼": { tier: 3, name: "T3 Cat", cost: { "💰": 4000 }, type: "GAIN", meta1: { "💰": 1000 }, tick: 10 },
-            "🤞": { tier: 2, name: "T2 Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
-            "🤟": { tier: 3, name: "T3 Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
-            "👌": { tier: 1, name: "T1 Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
-            '🦵': { tier: 1, name: "T1 Speed Tower", cost: { '💰': 10 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 5 } },
-            '🔋': { tier: 1, name: "T1 Power Tower", cost: { '💰': 10 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5 } },
+            "😀": { tier: 1, name: "Smily", cost: { "💰": 100 }, type: "GAIN", meta1: { "💰": 10 }, tick: 10 },
+            "😄": { tier: 2, name: "Smily", cost: { "💰": 400 }, type: "GAIN", meta1: { "💰": 40 }, tick: 20 },
+            "🤣": { tier: 3, name: "Smily", cost: { "💰": 900 }, type: "GAIN", meta1: { "💰": 90 }, tick: 30 },
+            "😺": { tier: 1, name: "Cat", cost: { "💰": 50 }, type: "CONVERT", meta1: { "💧": 1 }, meta2: { "💰": 12 }, tick: 8 },
+            "😹": { tier: 2, name: "Cat", cost: { "💰": 125 }, type: "CONVERT", meta1: { "💧": 3 }, meta2: { "💰": 36 }, tick: 15 },
+            "😼": { tier: 3, name: "Cat", cost: { "💰": 400 }, type: "CONVERT", meta1: { "💧": 2 }, meta2: { "💰": 24 }, tick: 6 },
+            "🍼": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
+            "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 5 }, tick: 25 },
+            "🫖": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 20 }, tick: 40 },
+            "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 50 },
+            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300}, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 50 },
+            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900}, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 50 },
+            "👌": { tier: 1, name: "Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
+            "🤞": { tier: 2, name: "Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
+            "🤟": { tier: 3, name: "Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
+            '🦵': { tier: 1, name: "Speed Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 5 } },
+            '🔋': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5 } },
         };
     // UNIT アイデア
     // リソースアイデア
@@ -80,6 +90,7 @@ export class GameScene extends Phaser.Scene {
     private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
     private textTweenMap: Phaser.Tweens.Tween[][]; // 表示用テキストアニメマップデータ
     private terrainMap: Record<TerrainType, number>[][];
+    private adjacentMap: Record<string, number>[][];
     private mapGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private mapX: number = -1;
     private mapY: number = -1;
@@ -92,9 +103,9 @@ export class GameScene extends Phaser.Scene {
     private choiceTexts: Phaser.GameObjects.Text[];
     private choice: number = -1;
     private choices: string[] = [
-        "😺",
-        "🔋",
-        "👌",
+        "🛖",
+        "🏢",
+        "🏭",
     ];
     private selectionGroup: Phaser.GameObjects.Group; // 描画用オブジェクト
     private selectionGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
@@ -121,7 +132,7 @@ export class GameScene extends Phaser.Scene {
     private confirmGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private confirmOK: boolean = false;
     private tick: number = 0;
-    private inventory: Record<string, number> = { "💰": 100 };
+    private inventory: Record<string, number> = { "💰": 1000 };
     private timerState: TimerState = '▶️';
     private victory: boolean = false;
 
@@ -184,7 +195,7 @@ export class GameScene extends Phaser.Scene {
 
         // 右側、説明表示用オブジェクトを作成する
         this.viewGraphics = this.add.graphics();
-        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5);
+        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3);
 
         // タイマーイベントを設定する
         const timer = this.time.addEvent({
@@ -212,6 +223,15 @@ export class GameScene extends Phaser.Scene {
             this.unitMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 this.unitMap[y][x] = null;
+            }
+        }
+
+        // 近隣情報マップを初期化する
+        this.adjacentMap = [];
+        for (let y = 0; y < this.MAP_HEIGHT; y++) {
+            this.adjacentMap.push([]);
+            for (let x = 0; x < this.MAP_WIDTH; x++) {
+                this.adjacentMap[y][x] = null;
             }
         }
 
@@ -295,7 +315,7 @@ export class GameScene extends Phaser.Scene {
         ];
         for (let i = 0; i < 3; ++i) {
             // テキストの追加
-            this.choiceTexts.push(this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
+            this.choiceTexts.push(this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             let choiceContainer = this.add.container(this.MAP_OFFSET_X / 2, ys[i]).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
@@ -312,7 +332,7 @@ export class GameScene extends Phaser.Scene {
         this.selectionContainers = [];
         for (let i = 0; i < 9; ++i) {
             // テキストの追加
-            this.selectionTexts.push(this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(5));
+            this.selectionTexts.push(this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             this.selectionContainers.push(this.add.container(1000, 1000).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT));
@@ -377,22 +397,19 @@ export class GameScene extends Phaser.Scene {
         this.tick++;
         this.resolveUnits();
         this.resolveItems();
-        this.drawStatus();
-        this.checkAndEnableConfirmButton();
-        this.drawView();
+        this.drawStatus(); // 資源の増減があるので描画
+        this.checkAndEnableConfirmButton(); // 資源の増減で購入可能が変化するので描画
+        this.drawView(); // tick の変更を更新するので描画
         if (this.victory) {
             this.timerState = '▶️';
-            this.drawStatus();
             this.drawPause();
             this.startVictory();
         } else if (this.tick == 3) {
             this.timerState = '▶️';
-            this.drawStatus();
             this.drawPause();
             this.startSelection('ITEM');
         } else if (this.tick == 20) {
             this.timerState = '▶️';
-            this.drawStatus();
             this.drawPause();
             this.startSelection('UNIT');
         }
@@ -452,25 +469,32 @@ export class GameScene extends Phaser.Scene {
     // ユニット追加時の処理(各ユニット毎1回のみ)
     private resolveAcquiredUnit(unit: { symbol: string, x: number, y: number }): void {
         let spec = this.UNIT_SPEC[unit.symbol];
+        let x = unit.x, y = unit.y;
+        let target = [
+            [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
+            [x - 1, y], [x + 1, y],
+            [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
+        ];
+        let newMeta2 = {};
         if (spec.type == "TERRAIN") {
-            let x = unit.x, y = unit.y;
-            let terrain = this.terrainMap[y][x];
-            let target = [
-                [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
-                [x - 1, y], [x + 1, y],
-                [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-            ];
-            let newMeta2 = this.getMetaByCalc(spec.meta2, terrain);
-            for (let [targetX, targetY] of target) {
-                if (targetX < 0 || this.MAP_WIDTH <= targetX || targetY < 0 || this.MAP_HEIGHT <= targetY) {
-                    continue;
-                }
+            newMeta2 = this.getMetaByCalc(spec.meta2, this.terrainMap[y][x]);
+        }
+        for (let [targetX, targetY] of target) {
+            if (targetX < 0 || this.MAP_WIDTH <= targetX || targetY < 0 || this.MAP_HEIGHT <= targetY) {
+                continue;
+            }
+
+            // ユニットのシリーズを近隣情報に追加
+            this.adjacentMap[targetY][targetX] = (this.adjacentMap[targetY][targetX] || {});
+            this.adjacentMap[targetY][targetX][spec.name] = (this.adjacentMap[targetY][targetX][spec.name] ?? 0) + spec.tier;
+
+            // 地形の場合は地形に追加
+            if (spec.type == "TERRAIN") {
                 let newTerrain: Record<TerrainType, number> = { '💪': 0, '⏱': 0 };
                 this.terrainMap[targetY][targetX] = (this.terrainMap[targetY][targetX] || { '💪': 0, '⏱': 0 });
                 this.terrainMap[targetY][targetX]['💪'] += newMeta2['💪'] ?? 0;
                 this.terrainMap[targetY][targetX]['⏱'] += newMeta2['⏱'] ?? 0;
             }
-            this.drawMap();
         }
     }
     // アイテムの毎ターン解決処理
@@ -667,13 +691,27 @@ export class GameScene extends Phaser.Scene {
         let symbol = this.choices[this.choice];
         let spec = this.UNIT_SPEC[symbol];
 
-        let purchaseOK = true;
+        // インベントリに必要コストがあるか確認
         for (let [key, value] of Object.entries(this.getCostByCalc(spec.cost))) {
             if ((this.inventory[key] ?? 0) < value) {
-                purchaseOK = false;
+                return false;
             }
         }
-        return purchaseOK;
+
+        // 前提ユニットが不要であればもう購入可能
+        if (!spec.require) {
+            return true;
+        }
+
+        // 前提ユニットがあるか確認
+        let adjacent = this.adjacentMap[this.mapY][this.mapX];
+        for (let [key, value] of Object.entries(spec.require)) {
+            if (((adjacent && adjacent[key]) ?? 0) < value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // ステータスを更新する
@@ -743,17 +781,22 @@ export class GameScene extends Phaser.Scene {
         let spec = this.UNIT_SPEC[symbol];
         let meta = '';
         if (spec.type == "GAIN") {
-            meta = '+' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
+            meta = this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
                 ' / ' + this.getTickByCalc(spec.tick, terrain);
         } else if (spec.type == "CONVERT") {
-            meta = '-' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
-                '->+' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta2, terrain)) +
+            meta = this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta1, terrain)) +
+                '-> ' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta2, terrain)) +
                 ' / ' + this.getTickByCalc(spec.tick, terrain);
         } else if (spec.type == "TERRAIN") {
             meta = Object.keys(spec.meta1).join('') + ': +' + this.getSimpleTextFromObject(this.getMetaByCalc(spec.meta2, terrain), '%');
         }
-        return symbol + ': ' + spec.name + '\n' + meta +
-            (noCost ? '' : '\n' + 'Cost: -' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)));
+        return symbol + ': T' + spec.tier + ' ' + spec.name + '\n' + meta +
+            (noCost
+                ? ''
+                : '\n' + 'Cost: ' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)) +
+                    ( spec.require
+                        ? '\nRequire: ' + this.getSimpleTextFromObject(spec.require, ' ')
+                        : '' ) );
     }
     private getTextFromUnitMap(): string {
         let unit = this.unitMap[this.mapY][this.mapX];
@@ -767,9 +810,13 @@ export class GameScene extends Phaser.Scene {
             return this.getTextFromUnitSpec(symbol, true, terrain);
         }
     }
-    private getTextFromTerrainMap() {
+    private getTextFromTerrainMap(): string {
         let terrain = this.terrainMap[this.mapY][this.mapX];
         return (terrain['💪'] >= 0 ? '+' : '') + terrain['💪'] + '%💪 / ' + (terrain['⏱'] >= 0 ? '+' : '') + terrain['⏱'] + '%⏱';
+    }
+    private getTextFromAdjacentMap(): string {
+        let adjacent = this.adjacentMap[this.mapY][this.mapX];
+        return this.getSimpleTextFromObject(adjacent, ' ');
     }
     private getTextFromItemSpec(symbol: string): string {
         let spec = this.ITEM_SPEC[symbol];
@@ -873,7 +920,7 @@ export class GameScene extends Phaser.Scene {
         vicotryGraphics.lineStyle(1, 0xffffff);
         vicotryGraphics.strokeRect(0, this.MAP_OFFSET_Y - space, this.SCREEN_WIDTH, this.SCREEN_HEIGHT);
 
-        let victoryText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + space, "VICTORY").setFontSize(80).setFill('#000').setOrigin(0.5).setAlign('center').setLineSpacing(5)
+        let victoryText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + space, "VICTORY").setFontSize(80).setFill('#000').setOrigin(0.5).setAlign('center').setLineSpacing(3)
 
         this.victoryGroup.add(vicotryGraphics);
         this.victoryGroup.add(victoryText);
@@ -881,7 +928,8 @@ export class GameScene extends Phaser.Scene {
     }
     // 右側の説明を描画(選択中はtickごとに更新)
     private drawView() {
-        if ((this.mapX < 0 || this.mapY < 0) || (!this.unitMap[this.mapY][this.mapX] && !this.terrainMap[this.mapY][this.mapX] && this.viewItem < 0)) {
+        if ((this.mapX < 0 || this.mapY < 0) ||
+            (!this.unitMap[this.mapY][this.mapX] && !this.terrainMap[this.mapY][this.mapX] && !this.adjacentMap[this.mapY][this.mapX] && this.viewItem < 0)) {
             this.viewGraphics.clear();
             this.viewText.setText(" ");
             return;
@@ -896,8 +944,10 @@ export class GameScene extends Phaser.Scene {
             this.viewText.setText(this.getTextFromItemSpec(this.items[this.viewItem].symbol));
         } else if (this.unitMap[this.mapY][this.mapX]) {
             this.viewText.setText(this.getTextFromUnitMap());
-        } else if (this.terrainMap[this.mapY][this.mapX]) {
-            this.viewText.setText(this.getTextFromTerrainMap());
+        } else {
+            let terrainText = this.terrainMap[this.mapY][this.mapX] ? this.getTextFromTerrainMap() : '';
+            let adjacentText = this.adjacentMap[this.mapY][this.mapX] ? this.getTextFromAdjacentMap() : '';
+            this.viewText.setText(terrainText + (terrainText && adjacentText ? '\n' : '') + adjacentText);
         }
         this.viewText.setPosition(this.SCREEN_WIDTH - this.MAP_OFFSET_X / 2, this.cameras.main.centerY);
     }
