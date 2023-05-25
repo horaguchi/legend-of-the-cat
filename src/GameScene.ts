@@ -437,7 +437,11 @@ export class GameScene extends Phaser.Scene {
             if (spec.type != "GAIN" && spec.type != "CONVERT") {
                 continue;
             }
-            if ((this.tick - unit.baseTick) % this.getTickByCalc(spec.tick, terrain) != 0) {
+            let calcTick = this.getTickByCalc(spec.tick, terrain);
+            let count = (this.tick - unit.baseTick) % calcTick;
+            // 各ユニットのアニメーション
+            this.textMap[unit.y][unit.x].setScale(1 - 0.5 * (calcTick - count) / calcTick); // 0.5 ~ 1.0 を繰り返す
+            if (count != 0) {
                 continue;
             }
             unit.baseTick = this.tick; // 基点をリセット
