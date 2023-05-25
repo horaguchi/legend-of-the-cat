@@ -18,6 +18,7 @@ export class GameScene extends Phaser.Scene {
     private readonly CHOICE_WIDTH = 300;
     private readonly CHOICE_HEIGHT = 80;
     private readonly CHOICE_SPACE = 15;
+    private readonly TEXT_STYLE = { testString: "😀|MÃ‰qgy" };
     private readonly UNIT_SPEC: Record<string, {
         tier: number,
         name: string,
@@ -38,8 +39,8 @@ export class GameScene extends Phaser.Scene {
             "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 5 }, tick: 25 },
             "🫖": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 20 }, tick: 40 },
             "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 50 },
-            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300}, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 50 },
-            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900}, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 50 },
+            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300 }, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 50 },
+            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900 }, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 50 },
             "👌": { tier: 1, name: "Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
             "🤞": { tier: 2, name: "Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
             "🤟": { tier: 3, name: "Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
@@ -147,10 +148,10 @@ export class GameScene extends Phaser.Scene {
 
     create(): void {
         // ステータス表示用テキストの初期化
-        this.statusText = this.add.text(10, 10, "  ").setFontSize(20).setFill('#fff');
+        this.statusText = this.add.text(10, 10, "  ", this.TEXT_STYLE).setFontSize(20).setFill('#fff');
 
         // ポーズボタン用テキスト・クリッカブル要素の初期化
-        this.pauseText = this.add.text(this.SCREEN_WIDTH - 25, 25, this.timerState).setFontSize(20).setFill('#fff').setOrigin(0.5);
+        this.pauseText = this.add.text(this.SCREEN_WIDTH - 25, 25, this.timerState, this.TEXT_STYLE).setFontSize(20).setFill('#fff').setOrigin(0.5);
         this.pauseTween = this.tweens.add({
             targets: this.pauseText,
             duration: 150,
@@ -178,7 +179,7 @@ export class GameScene extends Phaser.Scene {
         // アイテム表示用テキストの初期化
         this.itemTexts = [];
         for (let i = 0; i < 30; ++i) {
-            this.itemTexts.push(this.add.text(20 + 25 * i, 70, " ").setFontSize(20).setFill('#fff').setOrigin(0.5));
+            this.itemTexts.push(this.add.text(20 + 25 * i, 70, " ", this.TEXT_STYLE).setFontSize(20).setFill('#fff').setOrigin(0.5));
         }
 
         // 配置ボタンの初期化
@@ -195,7 +196,7 @@ export class GameScene extends Phaser.Scene {
 
         // 右側、説明表示用オブジェクトを作成する
         this.viewGraphics = this.add.graphics();
-        this.viewText = this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3);
+        this.viewText = this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3);
 
         // タイマーイベントを設定する
         const timer = this.time.addEvent({
@@ -287,7 +288,7 @@ export class GameScene extends Phaser.Scene {
                 this.textMap[y][x] = this.add.text(
                     x * this.CELL_SIZE + this.MAP_OFFSET_X + this.CELL_SIZE / 2,
                     y * this.CELL_SIZE + this.MAP_OFFSET_Y + this.CELL_SIZE / 2,
-                    " ").setFontSize(20).setFill('#fff').setOrigin(0.5);
+                    " ", this.TEXT_STYLE).setFontSize(20).setFill('#fff').setOrigin(0.5);
                 let tween = this.tweens.add({
                     targets: this.textMap[y][x],
                     duration: 250,
@@ -315,7 +316,7 @@ export class GameScene extends Phaser.Scene {
         ];
         for (let i = 0; i < 3; ++i) {
             // テキストの追加
-            this.choiceTexts.push(this.add.text(10, 10, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
+            this.choiceTexts.push(this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             let choiceContainer = this.add.container(this.MAP_OFFSET_X / 2, ys[i]).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
@@ -332,7 +333,7 @@ export class GameScene extends Phaser.Scene {
         this.selectionContainers = [];
         for (let i = 0; i < 9; ++i) {
             // テキストの追加
-            this.selectionTexts.push(this.add.text(1000, 1000, " ").setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
+            this.selectionTexts.push(this.add.text(1000, 1000, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             this.selectionContainers.push(this.add.container(1000, 1000).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT));
@@ -794,9 +795,9 @@ export class GameScene extends Phaser.Scene {
             (noCost
                 ? ''
                 : '\n' + 'Cost: ' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)) +
-                    ( spec.require
-                        ? '\nRequire: ' + this.getSimpleTextFromObject(spec.require, ' ')
-                        : '' ) );
+                (spec.require
+                    ? '\nRequire: ' + this.getSimpleTextFromObject(spec.require, ' ')
+                    : ''));
     }
     private getTextFromUnitMap(): string {
         let unit = this.unitMap[this.mapY][this.mapX];
