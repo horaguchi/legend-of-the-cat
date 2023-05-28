@@ -36,11 +36,11 @@ export class GameScene extends Phaser.Scene {
             "😹": { tier: 2, name: "Cat", cost: { "💰": 125 }, type: "CONVERT", meta1: { "💧": 3 }, meta2: { "💰": 36 }, tick: 15 },
             "😼": { tier: 3, name: "Cat", cost: { "💰": 400 }, type: "CONVERT", meta1: { "💧": 2 }, meta2: { "💰": 24 }, tick: 6 },
             "🍼": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
-            "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 5 }, tick: 25 },
-            "🫖": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 20 }, tick: 40 },
-            "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 50 },
-            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300 }, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 50 },
-            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900 }, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 50 },
+            "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 3 }, tick: 12 },
+            "🫖": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 8 }, tick: 16 },
+            "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 25 },
+            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300 }, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 25 },
+            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900 }, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 25 },
             "👌": { tier: 1, name: "Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
             "🤞": { tier: 2, name: "Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
             "🤟": { tier: 3, name: "Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
@@ -62,12 +62,17 @@ export class GameScene extends Phaser.Scene {
         meta2?: Record<string, number>,
     }> = {
             '👓': { name: 'Glasses', desc: 'gggg', type: "INSTANT", meta1: {} },
-            '🦺': { name: 'Safety Vest', desc: 'aaa', type: "INSTANT", meta1: {} },
+            '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
             '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
-            '👗': { name: 'Dress', desc: 'aaaaaaa', type: "INSTANT", meta1: { "💎": 1 } },
+            '👗': { name: 'Dress', desc: 'Get 1💎', type: "INSTANT", meta1: { "💎": 1 } },
             '🤑': { name: 'Feeling rich', desc: 'After saving 200💰, you win!', type: "VICTORY", meta1: { '💰': 200 } },
-            '🎫': { name: 'Ticket', desc: '10% Off', type: "INSTANT", meta1: { '🎫': 1 } },
+            '🎫': { name: 'Ticket', desc: 'Units can be purchased at 10% off.', type: "INSTANT", meta1: { '🎫': 1 } },
+            '🀫': { name: 'Mahjong', desc: 'After get 🀀🀁🀂🀃, you win!', type: 'VICTORY', meta1: { '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 } },
+            '🀀': { name: 'Mahjong: East Wind', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀀': 1 } },
+            '🀁': { name: 'Mahjong: East South', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀁': 1 } },
+            '🀂': { name: 'Mahjong: East West', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀂': 1 } },
+            '🀃': { name: 'Mahjong: East North', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀃': 1 } },
         };
 
     // TODO:
@@ -103,11 +108,7 @@ export class GameScene extends Phaser.Scene {
     private choiceGraphics: Phaser.GameObjects.Graphics; // 配置ユニット描画用オブジェクト
     private choiceTexts: Phaser.GameObjects.Text[];
     private choice: number = -1;
-    private choices: string[] = [
-        "🛖",
-        "🏢",
-        "🏭",
-    ];
+    private choices: string[] = Object.keys(this.UNIT_SPEC).filter((symbol) => { return this.UNIT_SPEC[symbol].tier == 1 }).sort((a, b) => 0.5 - Math.random()).slice(0, 3);
     private selectionGroup: Phaser.GameObjects.Group; // 描画用オブジェクト
     private selectionGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private selectionTexts: Phaser.GameObjects.Text[];
@@ -133,7 +134,7 @@ export class GameScene extends Phaser.Scene {
     private confirmGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private confirmOK: boolean = false;
     private tick: number = 0;
-    private inventory: Record<string, number> = { "💰": 1000 };
+    private inventory: Record<string, number> = { "💰": 1000, '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 };
     private timerState: TimerState = '▶️';
     private victory: boolean = false;
 
