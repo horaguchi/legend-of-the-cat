@@ -17,6 +17,7 @@ export class GameScene extends Phaser.Scene {
     private readonly MAP_OFFSET_Y = (this.SCREEN_HEIGHT - this.CELL_SIZE * this.MAP_HEIGHT) / 2; // マップの横幅（マス数）
     private readonly CHOICE_WIDTH = 300;
     private readonly CHOICE_HEIGHT = 80;
+    private readonly CHOICE_FONT_SIZE = 16;
     private readonly CHOICE_SPACE = 15;
     private readonly TEXT_STYLE = { testString: "😀|MÃ‰qgy" };
     private readonly UNIT_SPEC: Record<string, {
@@ -86,6 +87,7 @@ export class GameScene extends Phaser.Scene {
     //クリティカルが出て量が２倍に
     //ユニット選択肢が出るタイミング(**50?) / アイテムが出るタイミング(**00?)
     //オイルとギアで製品　→　製品をお金にする
+    //
 
     // ユニットマップデータ
     private unitMap: {
@@ -200,7 +202,7 @@ export class GameScene extends Phaser.Scene {
 
         // 右側、説明表示用オブジェクトを作成する
         this.viewGraphics = this.add.graphics();
-        this.viewText = this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3);
+        this.viewText = this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(this.CHOICE_FONT_SIZE).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3);
 
         // タイマーイベントを設定する
         const timer = this.time.addEvent({
@@ -295,9 +297,9 @@ export class GameScene extends Phaser.Scene {
         } else if (Math.random() < 0.2) { // 15%
             value = 30;
         } else if (Math.random() < 0.5) { // 30%
-            value = 20;
-        } else if (Math.random() < 0.8) { // 30%
             value = 10;
+        } else if (Math.random() < 0.8) { // 30%
+            value = -10;
         } else if (Math.random() < 0.95) { // 15%
             value = -30;
         } else if (Math.random() < 1.0) { // 5%
@@ -319,7 +321,7 @@ export class GameScene extends Phaser.Scene {
         ];
         for (let i = 0; i < 3; ++i) {
             // テキストの追加
-            this.choiceTexts.push(this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
+            this.choiceTexts.push(this.add.text(10, 10, " ", this.TEXT_STYLE).setFontSize(this.CHOICE_FONT_SIZE).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             let choiceContainer = this.add.container(this.MAP_OFFSET_X / 2, ys[i]).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT);
@@ -336,7 +338,7 @@ export class GameScene extends Phaser.Scene {
         this.selectionContainers = [];
         for (let i = 0; i < 9; ++i) {
             // テキストの追加
-            this.selectionTexts.push(this.add.text(1000, 1000, " ", this.TEXT_STYLE).setFontSize(16).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
+            this.selectionTexts.push(this.add.text(1000, 1000, " ", this.TEXT_STYLE).setFontSize(this.CHOICE_FONT_SIZE).setFill('#fff').setOrigin(0.5).setAlign('center').setLineSpacing(3));
 
             // クリッカブル要素を追加
             this.selectionContainers.push(this.add.container(1000, 1000).setSize(this.CHOICE_WIDTH, this.CHOICE_HEIGHT));
@@ -858,7 +860,9 @@ export class GameScene extends Phaser.Scene {
     }
     private getTextFromItemSpec(symbol: string): string {
         let spec = this.ITEM_SPEC[symbol];
-        return symbol + ': ' + spec.name + '\n' + spec.desc;
+        let textLength = Math.ceil(this.CHOICE_WIDTH * 1.5 / this.CHOICE_FONT_SIZE);
+        let desc = spec.desc.match(new RegExp(`.{1,${textLength}}`, 'g')).join('\n');
+        return symbol + ': ' + spec.name + '\n' + desc;
     }
 
     // 左側の選択肢を描画
