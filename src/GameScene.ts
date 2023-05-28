@@ -61,15 +61,15 @@ export class GameScene extends Phaser.Scene {
         meta1: Record<string, number>,
         meta2?: Record<string, number>,
     }> = {
-            '👓': { name: 'Glasses', desc: 'gggg', type: "INSTANT", meta1: {} },
             '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
-            '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
+            '👓': { name: 'Glasses', desc: 'Get 1👨‍💼, each requires one less (Min 1)', type: "INSTANT", meta1: { '👨‍💼': 1 } },
+            '👔': { name: 'Necktie', desc: 'Get 1👨‍💼, each requires one less (Min 1)', type: "INSTANT", meta1: { '👨‍💼': 1 } },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
-            '📗': { name: 'Green Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
-            '📘': { name: 'Blue Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
-            '📙': { name: 'Orange Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
-            '🖥': { name: 'Desktop Computer', desc: 'Add 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
-            '💻': { name: 'Raptop Computer', desc: 'Add 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
+            '📗': { name: 'Green Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '📘': { name: 'Blue Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '📙': { name: 'Orange Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '🖥': { name: 'Desktop Computer', desc: 'Get 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
+            '💻': { name: 'Raptop Computer', desc: 'Get 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
             '📈': { name: 'Inflation', desc: 'All unit amounts will be increased by 10%.', type: "INSTANT", meta1: { '📈': 1 } },
             '🪄': { name: 'Magic Wand', desc: 'The speed of all units is increased by 10%.', type: "INSTANT", meta1: { '🪄': 1 } },
             '👗': { name: 'Dress', desc: 'Get 1💎', type: "INSTANT", meta1: { "💎": 1 } },
@@ -83,9 +83,9 @@ export class GameScene extends Phaser.Scene {
         };
 
     // TODO:
-    // 全体のスピードアップ
-    //全体の量アップ
     //クリティカルが出て量が２倍に
+    //ユニット選択肢が出るタイミング(**50?) / アイテムが出るタイミング(**00?)
+    //オイルとギアで製品　→　製品をお金にする
 
     // ユニットマップデータ
     private unitMap: {
@@ -705,6 +705,16 @@ export class GameScene extends Phaser.Scene {
             })
         );
     }
+    // 必要ユニット計算、1は下回らない
+    private getRequireByCalc(require: Record<string, number>): Record<string, number> {
+        let requireBonus = this.inventory['👨‍💼'] ?? 0;
+        return requireBonus ? Object.fromEntries(
+            Object.entries(require).map(([key, value]) => {
+                let newValue = Math.max(1, value - requireBonus);
+                return [key, newValue];
+            })
+        ) : require;
+    }
     // 購入可能か判定
     private checkPurchasable(): boolean {
         let symbol = this.choices[this.choice];
@@ -724,7 +734,7 @@ export class GameScene extends Phaser.Scene {
 
         // 前提ユニットがあるか確認
         let adjacent = this.adjacentMap[this.mapY][this.mapX];
-        for (let [key, value] of Object.entries(spec.require)) {
+        for (let [key, value] of Object.entries(this.getRequireByCalc(spec.require))) {
             if (((adjacent && adjacent[key]) ?? 0) < value) {
                 return false;
             }
@@ -814,7 +824,7 @@ export class GameScene extends Phaser.Scene {
                 ? ''
                 : '\n' + 'Cost: ' + this.getSimpleTextFromObject(this.getCostByCalc(spec.cost)) +
                 (spec.require
-                    ? '\nRequire: ' + this.getSimpleTextFromObject(spec.require, ' ')
+                    ? '\nRequire: ' + this.getSimpleTextFromObject(this.getRequireByCalc(spec.require), ' ')
                     : ''));
     }
     private getTextFromUnitMap(): string {
