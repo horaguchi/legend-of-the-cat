@@ -65,6 +65,11 @@ export class GameScene extends Phaser.Scene {
             '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
             '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
+            '📗': { name: 'Green Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '📘': { name: 'Blue Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '📙': { name: 'Orange Book', desc: 'Add 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
+            '🖥': { name: 'Desktop Computer', desc: 'Add 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
+            '💻': { name: 'Raptop Computer', desc: 'Add 1💾, one more option for the item.', type: "INSTANT", meta1: { '💾': 1 } },
             '📈': { name: 'Inflation', desc: 'All unit amounts will be increased by 10%.', type: "INSTANT", meta1: { '📈': 1 } },
             '🪄': { name: 'Magic Wand', desc: 'The speed of all units is increased by 10%.', type: "INSTANT", meta1: { '🪄': 1 } },
             '👗': { name: 'Dress', desc: 'Get 1💎', type: "INSTANT", meta1: { "💎": 1 } },
@@ -361,11 +366,13 @@ export class GameScene extends Phaser.Scene {
     private startSelection(type: SelectionType = 'ITEM'): void {
         this.selectionType = type;
         if (type == 'ITEM') {
-            this.selections = Object.keys(this.ITEM_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, 3);
+            let itemNumber = Math.min((this.inventory['💾'] ?? 0) + 3, 9);
+            this.selections = Object.keys(this.ITEM_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, itemNumber);
             this.selection = -1;
             this.selectionConfirmText.setText('Choose 1 item');
         } else if (type == 'UNIT') {
-            this.selections = Object.keys(this.UNIT_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, 4);
+            let unitNumber = Math.min((this.inventory['📃'] ?? 0) + 4, 9);
+            this.selections = Object.keys(this.UNIT_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, unitNumber);
             this.selectionConfirmText.setText('Choose 3 units');
             this.multiSelection = {};
         }
