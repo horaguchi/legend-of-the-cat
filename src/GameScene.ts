@@ -3,7 +3,7 @@ import * as Phaser from 'phaser';
 type UnitType = "GAIN" | "CONVERT" | "TERRAIN";
 type ItemType = "INSTANT" | "VICTORY";
 type TerrainType = "💪" | "⏱";
-type SelectionType = "ITEM" | "UNIT";
+type SelectionType = 'NONE' | "ITEM" | "UNIT";
 type TimerState = "⏸️" | "▶️";
 
 export class GameScene extends Phaser.Scene {
@@ -62,9 +62,9 @@ export class GameScene extends Phaser.Scene {
         meta2?: Record<string, number>,
     }> = {
             '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
-            '👓': { name: 'Glasses', desc: 'Get 1👨‍💼, each requires one less (Min 1)', type: "INSTANT", meta1: { '👨‍💼': 1 } },
-            '👔': { name: 'Necktie', desc: 'Get 1👨‍💼, each requires one less (Min 1)', type: "INSTANT", meta1: { '👨‍💼': 1 } },
-            '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
+            '👓': { name: 'Glasses', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
+            '👔': { name: 'Necktie', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
+            '👷': { name: 'Construction', desc: 'Effects on all tiles.', type: "INSTANT", meta1: {} },
             '📗': { name: 'Green Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
             '📘': { name: 'Blue Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
             '📙': { name: 'Orange Book', desc: 'Get 1📃, one more initial option for the unit.', type: "INSTANT", meta1: { '📃': 1 } },
@@ -73,13 +73,13 @@ export class GameScene extends Phaser.Scene {
             '📈': { name: 'Inflation', desc: 'All unit amounts will be increased by 10%.', type: "INSTANT", meta1: { '📈': 1 } },
             '🪄': { name: 'Magic Wand', desc: 'The speed of all units is increased by 10%.', type: "INSTANT", meta1: { '🪄': 1 } },
             '👗': { name: 'Dress', desc: 'Get 1💎', type: "INSTANT", meta1: { "💎": 1 } },
-            '🤑': { name: 'Feeling rich', desc: 'After saving 200💰, you win!', type: "VICTORY", meta1: { '💰': 200 } },
             '🎫': { name: 'Ticket', desc: 'Units can be purchased at 10% off.', type: "INSTANT", meta1: { '🎫': 1 } },
-            '🀫': { name: 'Mahjong', desc: 'After get 🀀🀁🀂🀃, you win!', type: 'VICTORY', meta1: { '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 } },
             '🀀': { name: 'Mahjong: East Wind', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀀': 1 } },
             '🀁': { name: 'Mahjong: East South', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀁': 1 } },
             '🀂': { name: 'Mahjong: East West', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀂': 1 } },
             '🀃': { name: 'Mahjong: East North', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀃': 1 } },
+            '🀫': { name: 'Mahjong', desc: 'After get 🀀🀁🀂🀃, you win!', type: 'VICTORY', meta1: { '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 } },
+            '🤑': { name: 'Feeling rich', desc: 'After saving 10000💰, you win!', type: "VICTORY", meta1: { '💰': 200 } },
         };
 
     // TODO:
@@ -122,14 +122,10 @@ export class GameScene extends Phaser.Scene {
     private selectionConfirmText: Phaser.GameObjects.Text;
     private selectionContainers: Phaser.GameObjects.Container[];
     private selectionConfirmContainer: Phaser.GameObjects.Container;
-    private selectionType: SelectionType = 'ITEM';
+    private selectionType: SelectionType = 'NONE';
     private selection: number = -1;
     private multiSelection: Record<number, boolean>;
-    private selections: string[] = [
-        "🦺",
-        "🧤",
-        "👗",
-    ];
+    private selections: string[] = [];
     private viewGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private viewText: Phaser.GameObjects.Text;
     private viewItem: number = -1; // 説明選択用
@@ -141,7 +137,7 @@ export class GameScene extends Phaser.Scene {
     private confirmGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private confirmOK: boolean = false;
     private tick: number = 0;
-    private inventory: Record<string, number> = { "💰": 1000, '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 };
+    private inventory: Record<string, number> = { "💰": 1000, '💾': 10 };
     private timerState: TimerState = '▶️';
     private victory: boolean = false;
 
@@ -250,30 +246,7 @@ export class GameScene extends Phaser.Scene {
             this.terrainMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 // 初期地形ランダム
-                if (Math.random() < 0.05) {
-                    let obj = {};
-                    let value: number;
-                    if (Math.random() < 0.05) { // 5%
-                        value = 50;
-                    } else if (Math.random() < 0.2) { // 15%
-                        value = 30;
-                    } else if (Math.random() < 0.5) { // 30%
-                        value = 20;
-                    } else if (Math.random() < 0.8) { // 30%
-                        value = 10;
-                    } else if (Math.random() < 0.95) { // 15%
-                        value = -30;
-                    } else if (Math.random() < 1.0) { // 5%
-                        value = -50;
-                    }
-                    let key: TerrainType = (Math.random() < 0.5 ? "💪" : "⏱");
-                    this.terrainMap[y][x] = {
-                        "💪": key == "💪" ? value : 0,
-                        "⏱": key == "⏱" ? value : 0,
-                    };
-                } else {
-                    this.terrainMap[y][x] = null;
-                }
+                this.terrainMap[y][x] =  Math.random() < 0.05 ? this.getRandomTerrain() : null;
             }
         }
 
@@ -313,6 +286,28 @@ export class GameScene extends Phaser.Scene {
                 this.textTweenMap[y][x] = tween;
             }
         }
+    }
+    private getRandomTerrain(): Record<TerrainType, number> {
+        let obj = {};
+        let value: number;
+        if (Math.random() < 0.05) { // 5%
+            value = 50;
+        } else if (Math.random() < 0.2) { // 15%
+            value = 30;
+        } else if (Math.random() < 0.5) { // 30%
+            value = 20;
+        } else if (Math.random() < 0.8) { // 30%
+            value = 10;
+        } else if (Math.random() < 0.95) { // 15%
+            value = -30;
+        } else if (Math.random() < 1.0) { // 5%
+            value = -50;
+        }
+        let key: TerrainType = (Math.random() < 0.5 ? "💪" : "⏱");
+        return {
+            "💪": key == "💪" ? value : 0,
+            "⏱": key == "⏱" ? value : 0,
+        };
     }
     private createChoice(): void {
         this.choiceGraphics = this.add.graphics();
@@ -419,7 +414,7 @@ export class GameScene extends Phaser.Scene {
             this.timerState = '▶️';
             this.drawPause();
             this.startSelection('ITEM');
-        } else if (this.tick == 20) {
+        } else if (this.tick == 5) {
             this.timerState = '▶️';
             this.drawPause();
             this.startSelection('UNIT');
@@ -516,6 +511,7 @@ export class GameScene extends Phaser.Scene {
             }
         }
     }
+
     // アイテムの毎ターン解決処理
     private resolveItems(): void {
         for (let item of this.items) {
@@ -537,6 +533,17 @@ export class GameScene extends Phaser.Scene {
     // アイテム追加時の処理(各アイテム毎1回のみ)
     private resolveAcquiredItem(item: { symbol: string }): void {
         let spec = this.ITEM_SPEC[item.symbol];
+        if (item.symbol == '👷') { // Effects on all tiles.
+            for (let y = 0; y < this.MAP_HEIGHT; y++) {
+                for (let x = 0; x < this.MAP_WIDTH; x++) {
+                    // 地形効果がないところすべて
+                    if (!(this.terrainMap[y][x] ?? false)) {
+                        this.terrainMap[y][x] = this.getRandomTerrain();
+                    }
+                }
+            }
+            this.drawMap();
+        }
         if (spec.type == "INSTANT") {
             for (let [key, value] of Object.entries(spec.meta1)) {
                 this.inventory[key] = (this.inventory[key] ?? 0) + value;
@@ -548,6 +555,9 @@ export class GameScene extends Phaser.Scene {
 
     // 右上のポーズクリック
     private clickPause(): void {
+        if (this.selectionType != 'NONE') {
+            return;
+        }
         this.timerState = (this.timerState == '▶️' ? '⏸️' : '▶️');
         this.drawPause();
     }
@@ -606,13 +616,11 @@ export class GameScene extends Phaser.Scene {
         if (!this.confirmOK) {
             return;
         }
-
         let symbol = this.choices[this.choice];
         let spec = this.UNIT_SPEC[symbol];
         for (let [key, value] of Object.entries(this.getCostByCalc(spec.cost))) {
             this.inventory[key] -= value;
         }
-
         this.unitMap[this.mapY][this.mapX] = { symbol: symbol, baseTick: this.tick, x: this.mapX, y: this.mapY };
         this.textMap[this.mapY][this.mapX].setText(symbol);
         this.units.push(this.unitMap[this.mapY][this.mapX]);
@@ -688,6 +696,7 @@ export class GameScene extends Phaser.Scene {
             ease: 'Power1',
             alpha: 0
         });
+        this.selectionType = 'NONE';
     }
 
     // ステータス下の、既に取得したアイテムを選択(内容確認)
