@@ -33,6 +33,9 @@ export class GameScene extends Phaser.Scene {
             "😀": { tier: 1, name: "Smily", cost: { "💰": 100 }, type: "GAIN", meta1: { "💰": 10 }, tick: 10 },
             "😄": { tier: 2, name: "Smily", cost: { "💰": 400 }, type: "GAIN", meta1: { "💰": 40 }, tick: 20 },
             "🤣": { tier: 3, name: "Smily", cost: { "💰": 900 }, type: "GAIN", meta1: { "💰": 90 }, tick: 30 },
+            "⛏": { tier: 1, name: "Mining", cost: { "💰": 50 }, type: "GAIN", meta1: { "🪨": 10 }, tick: 5 },
+            "⚒": { tier: 2, name: "Mining", cost: { "🪨": 500 }, require: { "Mining": 3 }, type: "GAIN", meta1: { "🪨": 30 }, tick: 10 },
+            "🗜": { tier: 3, name: "Mining", cost: { "🪨": 1000 }, require: { "Mining": 6 }, type: "CONVERT", meta1: { "🪨": 100 }, meta2: { "💰": 50 }, tick: 20 },
             // Water-Cat
             "💧": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
             "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 3 }, tick: 12 },
@@ -47,9 +50,6 @@ export class GameScene extends Phaser.Scene {
             "🏠": { tier: 1, name: "Store", cost: { "💰": 100 }, type: "CONVERT", meta1: { "🛢️": 1 }, meta2: { "💰": 25 }, tick: 10 },
             "🏪": { tier: 2, name: "Store", cost: { "💰": 300 }, require: { "Store": 2 }, type: "CONVERT", meta1: { "⚙️": 1 }, meta2: { "💰": 100 }, tick: 20 },
             "🏬": { tier: 3, name: "Store", cost: { "💰": 700 }, require: { "Store": 5 }, type: "CONVERT", meta1: { "🧰": 1 }, meta2: { "💰": 250 }, tick: 30 },
-            "👌": { tier: 1, name: "Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
-            "🤞": { tier: 2, name: "Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
-            "🤟": { tier: 3, name: "Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
             // TERRAIN
             '🦵': { tier: 1, name: "Speed Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 5 } },
             '🦿': { tier: 2, name: "Speed Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 10 } },
@@ -248,7 +248,7 @@ export class GameScene extends Phaser.Scene {
             this.terrainMap.push([]);
             for (let x = 0; x < this.MAP_WIDTH; x++) {
                 // 初期地形ランダム
-                this.terrainMap[y][x] =  Math.random() < 0.05 ? this.getRandomTerrain() : null;
+                this.terrainMap[y][x] = Math.random() < 0.05 ? this.getRandomTerrain() : null;
             }
         }
 
