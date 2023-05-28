@@ -33,28 +33,35 @@ export class GameScene extends Phaser.Scene {
             "😀": { tier: 1, name: "Smily", cost: { "💰": 100 }, type: "GAIN", meta1: { "💰": 10 }, tick: 10 },
             "😄": { tier: 2, name: "Smily", cost: { "💰": 400 }, type: "GAIN", meta1: { "💰": 40 }, tick: 20 },
             "🤣": { tier: 3, name: "Smily", cost: { "💰": 900 }, type: "GAIN", meta1: { "💰": 90 }, tick: 30 },
+            // Water-Cat
+            "💧": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
+            "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 3 }, tick: 12 },
+            "⛲": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 8 }, tick: 16 },
             "😺": { tier: 1, name: "Cat", cost: { "💰": 50 }, type: "CONVERT", meta1: { "💧": 1 }, meta2: { "💰": 12 }, tick: 8 },
             "😹": { tier: 2, name: "Cat", cost: { "💰": 125 }, type: "CONVERT", meta1: { "💧": 3 }, meta2: { "💰": 36 }, tick: 15 },
-            "😼": { tier: 3, name: "Cat", cost: { "💰": 400 }, type: "CONVERT", meta1: { "💧": 2 }, meta2: { "💰": 24 }, tick: 6 },
-            "🍼": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
-            "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 3 }, tick: 12 },
-            "🫖": { tier: 3, name: "Water", cost: { "💰": 1250 }, type: "GAIN", meta1: { "💧": 8 }, tick: 16 },
-            "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 25 },
-            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300 }, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 25 },
-            "🏭": { tier: 3, name: "Factory", cost: { "💰": 900 }, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 25 },
+            "😻": { tier: 3, name: "Cat", cost: { "💰": 400 }, type: "CONVERT", meta1: { "💧": 2 }, meta2: { "💰": 24 }, tick: 6 },
+            // Factory-Store
+            "🛖": { tier: 1, name: "Factory", cost: { "💰": 100 }, type: "GAIN", meta1: { "🛢️": 1 }, tick: 10 },
+            "🏢": { tier: 2, name: "Factory", cost: { "💰": 300 }, require: { "Factory": 2 }, type: "GAIN", meta1: { "⚙️": 1 }, tick: 20 },
+            "🏭": { tier: 3, name: "Factory", cost: { "💰": 700 }, require: { "Factory": 5 }, type: "GAIN", meta1: { "🧰": 1 }, tick: 30 },
+            "🏠": { tier: 1, name: "Store", cost: { "💰": 100 }, type: "CONVERT", meta1: { "🛢️": 1 }, meta2: { "💰": 25 }, tick: 10 },
+            "🏪": { tier: 2, name: "Store", cost: { "💰": 300 }, require: { "Store": 2 }, type: "CONVERT", meta1: { "⚙️": 1 }, meta2: { "💰": 100 }, tick: 20 },
+            "🏬": { tier: 3, name: "Store", cost: { "💰": 700 }, require: { "Store": 5 }, type: "CONVERT", meta1: { "🧰": 1 }, meta2: { "💰": 250 }, tick: 30 },
             "👌": { tier: 1, name: "Finger", cost: { "💰": 10, "🌹": 1 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 200 }, tick: 10 },
             "🤞": { tier: 2, name: "Finger", cost: { "💰": 20, "🌹": 2 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 2000 }, tick: 20 },
             "🤟": { tier: 3, name: "Finger", cost: { "💰": 30, "🌹": 3 }, type: "CONVERT", meta1: { "🌹": 1 }, meta2: { "💰": 20000 }, tick: 30 },
+            // TERRAIN
             '🦵': { tier: 1, name: "Speed Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 5 } },
-            '🔋': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5 } },
+            '🦿': { tier: 2, name: "Speed Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 10 } },
+            '🦼': { tier: 3, name: "Speed Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 20 } },
+            '🕯️': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5 } },
+            '💡': { tier: 2, name: "Power Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10 } },
+            '🪩': { tier: 3, name: "Power Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20 } },
         };
+    // ITEM アイデア
     // UNIT アイデア
     // リソースアイデア
-    // お金 - お金を生み出す
-    // 宝石 - あまり生まれないが、特定のリソースに必要
-    // 歯車 - まり生まれないが、特定のリソースに必要
-    // 石 - 単純にお金よりたくさん生まれる
-    // ユニットをおけるかず
+    // https://keep.google.com/#NOTE/1wl3GLy9D5GX4WOZYGKLN8Hl4MAvv5Ub-iSqynsdDpjRSdg2e5ZpWAB_pHPUtOJXFf-CBhw
     private readonly ITEM_SPEC: Record<string, {
         name: string,
         desc: string,
@@ -80,15 +87,8 @@ export class GameScene extends Phaser.Scene {
             '🀂': { name: 'Mahjong: East West', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀂': 1 } },
             '🀃': { name: 'Mahjong: East North', desc: 'Nothing happens. BUT...?', type: 'INSTANT', meta1: { '🀃': 1 } },
             '🀫': { name: 'Mahjong', desc: 'After get 🀀🀁🀂🀃, you win!', type: 'VICTORY', meta1: { '🀀': 1, '🀁': 1, '🀂': 1, '🀃': 1 } },
-            '🤑': { name: 'Feeling rich', desc: 'After saving 10000💰, you win!', type: "VICTORY", meta1: { '💰': 200 } },
+            '🤑': { name: 'Feeling rich', desc: 'After saving 10000💰, you win!', type: "VICTORY", meta1: { '💰': 10000 } },
         };
-
-    // TODO:
-    //クリティカルが出て量が２倍に
-    //ユニット選択肢が出るタイミング(**50?) / アイテムが出るタイミング(**00?)
-    //オイルとギアで製品　→　製品をお金にする
-    //
-
     // ユニットマップデータ
     private unitMap: {
         symbol: string,
@@ -139,7 +139,7 @@ export class GameScene extends Phaser.Scene {
     private confirmGraphics: Phaser.GameObjects.Graphics; // 描画用オブジェクト
     private confirmOK: boolean = false;
     private tick: number = 0;
-    private inventory: Record<string, number> = { "💰": 1000, '💾': 10 };
+    private inventory: Record<string, number> = { "💰": 200, '💾': 10 };
     private timerState: TimerState = '▶️';
     private victory: boolean = false;
 
@@ -412,11 +412,11 @@ export class GameScene extends Phaser.Scene {
             this.timerState = '▶️';
             this.drawPause();
             this.startVictory();
-        } else if (this.tick == 3) {
+        } else if (this.tick == 2 || (this.tick % 100 == 0 && this.tick % 500 != 0)) {
             this.timerState = '▶️';
             this.drawPause();
             this.startSelection('ITEM');
-        } else if (this.tick == 5) {
+        } else if (this.tick == 4 || (this.tick % 50 == 0 && this.tick % 100 != 0)) {
             this.timerState = '▶️';
             this.drawPause();
             this.startSelection('UNIT');
@@ -557,7 +557,7 @@ export class GameScene extends Phaser.Scene {
 
     // 右上のポーズクリック
     private clickPause(): void {
-        if (this.selectionType != 'NONE') {
+        if (this.selectionType != 'NONE' || this.victory) {
             return;
         }
         this.timerState = (this.timerState == '▶️' ? '⏸️' : '▶️');
