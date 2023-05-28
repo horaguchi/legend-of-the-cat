@@ -65,6 +65,8 @@ export class GameScene extends Phaser.Scene {
             '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
             '👔': { name: 'Necktie', desc: 'aaa', type: "INSTANT", meta1: {} },
             '🧤': { name: 'Gloves', desc: 'aaaaaaaa', type: "INSTANT", meta1: {} },
+            '📈': { name: 'Inflation', desc: 'All unit amounts will be increased by 10%.', type: "INSTANT", meta1: { '📈': 1 } },
+            '🪄': { name: 'Magic Wand', desc: 'The speed of all units is increased by 10%.', type: "INSTANT", meta1: { '🪄': 1 } },
             '👗': { name: 'Dress', desc: 'Get 1💎', type: "INSTANT", meta1: { "💎": 1 } },
             '🤑': { name: 'Feeling rich', desc: 'After saving 200💰, you win!', type: "VICTORY", meta1: { '💰': 200 } },
             '🎫': { name: 'Ticket', desc: 'Units can be purchased at 10% off.', type: "INSTANT", meta1: { '🎫': 1 } },
@@ -419,16 +421,20 @@ export class GameScene extends Phaser.Scene {
 
     // 量計算処理
     private getMetaByCalc(meta: Record<string, number>, terrain: Record<TerrainType, number> = null): Record<string, number> {
-        return terrain ? Object.fromEntries(
+        let itemBonus = (this.inventory['📈'] ?? 0) * 10;
+        let terrainBonus = ((terrain && terrain['💪']) ?? 0);
+        return (itemBonus || terrainBonus) ? Object.fromEntries(
             Object.entries(meta).map(([key, value]) => {
-                let newValue = Math.round(value * (100 + terrain['💪']) / 100);
+                let newValue = Math.round(value * (100 + terrainBonus + itemBonus) / 100);
                 return [key, newValue];
             })
         ) : meta;
     }
     // スピード計算処理(1より小さくはならない)
     private getTickByCalc(tick: number, terrain: Record<TerrainType, number> = null): number {
-        return Math.max(1, (terrain ? Math.round(tick * 100 / (100 + terrain['⏱'])) : tick));
+        let itemBonus = (this.inventory['🪄'] ?? 0) * 10;
+        let terrainBonus = ((terrain && terrain['⏱']) ?? 0);
+        return Math.max(1, ((itemBonus || terrainBonus) ? Math.round(tick * 100 / (100 + terrainBonus + itemBonus)) : tick));
     }
     // ユニットの毎ターン解決処理
     private resolveUnits(): void {
