@@ -391,8 +391,9 @@ export class GameScene extends Phaser.Scene {
             this.selectionConfirmText.setText('Choose 3 units');
             this.multiSelection = {};
         } else if (type == 'RUIN') {
-            let ruinNumber = Math.min((this.inventory['未定'] ?? 0) + 3, 9);
-            this.selections = Object.keys(this.RUIN_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, ruinNumber);
+            let ruinNumber = Math.min((this.inventory['未定'] ?? 0) + 2, 9);
+            // 冒頭の 💀 Death は必ず含む
+            this.selections = [ '💀' ].concat(Object.keys(this.RUIN_SPEC).slice(1).sort((a, b) => 0.5 - Math.random()).slice(0, ruinNumber));
             this.selection = -1;
             this.selectionConfirmText.setText('Choose 1 ruin');
         }
