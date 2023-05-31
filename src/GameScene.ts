@@ -3,6 +3,7 @@ import * as Phaser from 'phaser';
 type UnitType = "GAIN" | "CONVERT" | "TERRAIN";
 type ItemType = "INSTANT" | "VICTORY";
 type TerrainType = "💪" | "⏱";
+type RuinType = "SPEND" | "PLACE";
 type SelectionType = 'NONE' | "ITEM" | "UNIT" | 'RUIN';
 type TimerState = "⏸️" | "▶️";
 // 定数群
@@ -30,12 +31,16 @@ const UNIT_SPEC: Record<string, {
     meta2?: Record<string, number>,
     tick?: number
 }> = {
+    // Basic
     "😀": { tier: 1, name: "Smily", cost: { "💰": 100 }, type: "GAIN", meta1: { "💰": 10 }, tick: 10 },
     "😄": { tier: 2, name: "Smily", cost: { "💰": 400 }, type: "GAIN", meta1: { "💰": 40 }, tick: 20 },
     "🤣": { tier: 3, name: "Smily", cost: { "💰": 900 }, type: "GAIN", meta1: { "💰": 90 }, tick: 30 },
+    "🧍": { tier: 1, name: "Person", cost: { "💰": 100 }, type: "GAIN", meta1: { "💰": 300 }, tick: 100 },
+    "🚶": { tier: 2, name: "Person", cost: { "💰": 400 }, type: "GAIN", meta1: { "💰": 800 }, tick: 200 },
+    "🏃": { tier: 3, name: "Person", cost: { "💰": 900 }, type: "GAIN", meta1: { "💰": 1500 }, tick: 300 },
     "⛏": { tier: 1, name: "Mining", cost: { "💰": 50 }, type: "GAIN", meta1: { "🪨": 10 }, tick: 5 },
-    "⚒": { tier: 2, name: "Mining", cost: { "🪨": 500 }, require: { "Mining": 3 }, type: "GAIN", meta1: { "🪨": 30 }, tick: 10 },
-    "🗜": { tier: 3, name: "Mining", cost: { "🪨": 1000 }, require: { "Mining": 6 }, type: "CONVERT", meta1: { "🪨": 100 }, meta2: { "💰": 50 }, tick: 20 },
+    "⚒": { tier: 2, name: "Mining", cost: { "🪨": 500 }, type: "GAIN", meta1: { "🪨": 30 }, tick: 10 },
+    "🗜": { tier: 3, name: "Mining", cost: { "🪨": 1000 }, type: "CONVERT", meta1: { "🪨": 100 }, meta2: { "💰": 50 }, tick: 20 },
     // Water-Cat
     "💧": { tier: 1, name: "Water", cost: { "💰": 50 }, type: "GAIN", meta1: { "💧": 1 }, tick: 10 },
     "🫗": { tier: 2, name: "Water", cost: { "💰": 200 }, type: "GAIN", meta1: { "💧": 3 }, tick: 12 },
@@ -51,12 +56,18 @@ const UNIT_SPEC: Record<string, {
     "🏪": { tier: 2, name: "Store", cost: { "💰": 300 }, require: { "Store": 2 }, type: "CONVERT", meta1: { "⚙️": 1 }, meta2: { "💰": 100 }, tick: 20 },
     "🏬": { tier: 3, name: "Store", cost: { "💰": 700 }, require: { "Store": 5 }, type: "CONVERT", meta1: { "🧰": 1 }, meta2: { "💰": 250 }, tick: 30 },
     // TERRAIN
-    '🦵': { tier: 1, name: "Speed Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 5 } },
-    '🦿': { tier: 2, name: "Speed Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 10 } },
-    '🦼': { tier: 3, name: "Speed Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 20 } },
-    '🕯️': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5 } },
-    '💡': { tier: 2, name: "Power Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10 } },
-    '🪩': { tier: 3, name: "Power Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20 } },
+    '🦵': { tier: 1, name: "Speed Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 10 } },
+    '🦿': { tier: 2, name: "Speed Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 20 } },
+    '🦼': { tier: 3, name: "Speed Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '⏱': 30 } },
+    '🕯️': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10 } },
+    '💡': { tier: 2, name: "Power Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20 } },
+    '🪩': { tier: 3, name: "Power Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 30 } },
+    '👍': { tier: 1, name: "Happy Tower", cost: { '💰': 100 }, require: { "Cat": 1 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10, '⏱': 10 } },
+    '👏': { tier: 2, name: "Happy Tower", cost: { '💰': 400 }, require: { "Cat": 2 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20, '⏱': 20 } },
+    '🫶': { tier: 3, name: "Happy Tower", cost: { '💰': 900 }, require: { "Cat": 3 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 30, '⏱': 30 } },
+    // Special (placed by item)
+    "🕳️": { tier: 0, name: "Hole", cost: {}, type: "GAIN", meta1: { "🪨": 1 }, tick: 10 },
+    "🦂": { tier: 0, name: "Scorpion", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '⏱': -30 } },
 } as const;
 // アイテムデータ
 const ITEM_SPEC: Record<string, {
@@ -66,7 +77,7 @@ const ITEM_SPEC: Record<string, {
     meta1: Record<string, number>,
     meta2?: Record<string, number>,
 }> = {
-    '🦺': { name: 'Safety Vest', desc: 'All negative terrain effects will be eliminated.', type: "INSTANT", meta1: { '🦺': 1 } }, // TODO
+    '📦️': { name: 'Product Import', desc: 'Import factory products {100🛢️,100⚙️,100🧰}.', type: "INSTANT", meta1: { '🛢️': 100, '⚙️': 100, '🧰': 100 } },
     '👓': { name: 'Glasses', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
     '👔': { name: 'Necktie', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
     '👷': { name: 'Construction', desc: 'Effects on all tiles.', type: "INSTANT", meta1: {} },
@@ -89,13 +100,16 @@ const ITEM_SPEC: Record<string, {
 // 破滅データ
 const RUIN_SPEC: Record<string, {
     name: string,
+    type: RuinType,
+    cost: Record<string, number>,
     meta1: Record<string, number>,
-    meta2: Record<string, number>,
 }> = {
-    '💀': { name: 'Death', meta1: {}, meta2: { '🧡': -3 } },
-    '💸': { name: 'Waste', meta1: { '💰': 1000 }, meta2: { '🧡': -2 } },
-    '🦹': { name: 'Greed', meta1: { '💎': 1 }, meta2: { '🧡': -1 } },
-    '📉': { name: 'Crash', meta1: { '🪄': 1, '📈': 1, }, meta2: { '🧡': -1 } },
+    '💀': { name: 'Death', type: 'SPEND', cost: {}, meta1: { '🧡': -3 } },
+    '💸': { name: 'Waste', type: 'SPEND', cost: { '💰': 1000 }, meta1: { '🧡': -2 } },
+    '🦹': { name: 'Greed', type: 'SPEND', cost: { '💎': 1 }, meta1: { '🧡': -1 } },
+    '📉': { name: 'Crash', type: 'SPEND', cost: { '🪄': 1, '📈': 1, }, meta1: { '🧡': -1 } },
+    '🕳️': { name: 'Hole', type: 'PLACE', cost: { '🕳️': 15 }, meta1: { '🧡': -1 } },
+    '🦂': { name: 'Scorpion', type: 'PLACE', cost: { '🦂': 5 }, meta1: { '🧡': -1 } },
 } as const;
 // もろもろアイデア
 // https://keep.google.com/#NOTE/1wl3GLy9D5GX4WOZYGKLN8Hl4MAvv5Ub-iSqynsdDpjRSdg2e5ZpWAB_pHPUtOJXFf-CBhw
@@ -132,13 +146,13 @@ export class GameScene extends Phaser.Scene {
     private choiceGraphics: Phaser.GameObjects.Graphics;
     private choiceTexts: Phaser.GameObjects.Text[] = [];
     private choice: number = -1; // 今選択している左のユニット
-    private choices: string[] = Object.keys(UNIT_SPEC).filter((symbol) => { return UNIT_SPEC[symbol].tier == 1 }).sort((a, b) => 0.5 - Math.random()).slice(0, 3);
+    private choices: string[] = Object.keys(UNIT_SPEC).filter((symbol) => { return UNIT_SPEC[symbol].tier == 1 }).sort(() => 0.5 - Math.random()).slice(0, 3);
     private selectionGroup: Phaser.GameObjects.Group;
     private selectionGraphics: Phaser.GameObjects.Graphics;
     private selectionTexts: Phaser.GameObjects.Text[] = [];
     private selectionContainers: Phaser.GameObjects.Container[] = [];
-    private selectionConfirmText: Phaser.GameObjects.Text;
-    private selectionConfirmContainer: Phaser.GameObjects.Container;
+    private selectionConfirmButtonText: Phaser.GameObjects.Text;
+    private selectionConfirmButtonContainer: Phaser.GameObjects.Container;
     private selectionType: SelectionType = 'NONE';
     private selections: string[] = []; // 選択するための選択肢
     private selection: number = -1; // 今選択しているもの
@@ -149,8 +163,8 @@ export class GameScene extends Phaser.Scene {
     private statusText: Phaser.GameObjects.Text;
     private pauseText: Phaser.GameObjects.Text;
     private pauseTween: Phaser.Tweens.Tween;
-    private confirmText: Phaser.GameObjects.Text;
-    private confirmGraphics: Phaser.GameObjects.Graphics;
+    private confirmButtonText: Phaser.GameObjects.Text;
+    private confirmButtonGraphics: Phaser.GameObjects.Graphics;
     private victoryOK: boolean = false;
     private gameoverOK: boolean = false;
     private tick: number = 0;
@@ -176,12 +190,12 @@ export class GameScene extends Phaser.Scene {
             this.itemTexts.push(this.add.text(20 + 25 * i, 70, " ", TEXT_STYLE).setFontSize(20).setFill('#fff').setOrigin(0.5));
         }
         // 配置ボタンの初期化
-        this.confirmText = this.add.text(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999').setOrigin(0.5);
-        this.confirmGraphics = this.add.graphics();
+        this.confirmButtonText = this.add.text(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999').setOrigin(0.5);
+        this.confirmButtonGraphics = this.add.graphics();
         let confirmContainer = this.add.container(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2).setSize(400, 40);
         confirmContainer.setInteractive({ useHandCursor: true });
         confirmContainer.on('pointerdown', () => {
-            this.clickConfirm();
+            this.clickConfirmButton();
         });
         // 右側、説明表示用オブジェクトを作成する
         this.viewGraphics = this.add.graphics();
@@ -345,13 +359,13 @@ export class GameScene extends Phaser.Scene {
         for (let text of this.selectionTexts) {
             this.selectionGroup.add(text);
         }
-        this.selectionConfirmText = this.add.text(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2, "Choose 1 item").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
-        this.selectionConfirmContainer = this.add.container(1000, 1000).setSize(400, 40);
-        this.selectionConfirmContainer.setInteractive({ useHandCursor: true });
-        this.selectionConfirmContainer.on("pointerdown", () => {
-            this.clickSelectionConfirm();
+        this.selectionConfirmButtonText = this.add.text(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2, "Choose 1 item").setFontSize(20).setFill('#fff').setOrigin(0.5).setAlign('center');
+        this.selectionConfirmButtonContainer = this.add.container(1000, 1000).setSize(400, 40);
+        this.selectionConfirmButtonContainer.setInteractive({ useHandCursor: true });
+        this.selectionConfirmButtonContainer.on("pointerdown", () => {
+            this.clickSelectionConfirmButton();
         });
-        this.selectionGroup.add(this.selectionConfirmText);
+        this.selectionGroup.add(this.selectionConfirmButtonText);
         this.selectionGroup.add(this.selectionGraphics);
         this.selectionGroup.setAlpha(0);
     }
@@ -359,20 +373,20 @@ export class GameScene extends Phaser.Scene {
         this.selectionType = type;
         if (type == 'ITEM') {
             let itemNumber = Math.min((this.inventory['💾'] ?? 0) + 3, 9);
-            this.selections = Object.keys(ITEM_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, itemNumber);
+            this.selections = Object.keys(ITEM_SPEC).sort(() => 0.5 - Math.random()).slice(0, itemNumber);
             this.selection = -1;
-            this.selectionConfirmText.setText('Choose 1 item');
+            this.selectionConfirmButtonText.setText('Choose 1 item');
         } else if (type == 'UNIT') {
             let unitNumber = Math.min((this.inventory['📃'] ?? 0) + 4, 9);
-            this.selections = Object.keys(UNIT_SPEC).sort((a, b) => 0.5 - Math.random()).slice(0, unitNumber);
-            this.selectionConfirmText.setText('Choose 3 units');
+            this.selections = Object.keys(UNIT_SPEC).sort(() => 0.5 - Math.random()).slice(0, unitNumber);
+            this.selectionConfirmButtonText.setText('Choose 3 units');
             this.multiSelection = {};
         } else if (type == 'RUIN') {
             let ruinNumber = Math.min((this.inventory['未定'] ?? 0) + 2, 9);
             // 冒頭の 💀 Death は必ず含む
-            this.selections = ['💀'].concat(Object.keys(RUIN_SPEC).slice(1).sort((a, b) => 0.5 - Math.random()).slice(0, ruinNumber));
+            this.selections = ['💀'].concat(Object.keys(RUIN_SPEC).slice(1).sort(() => 0.5 - Math.random()).slice(0, ruinNumber));
             this.selection = -1;
-            this.selectionConfirmText.setText('Choose 1 ruin');
+            this.selectionConfirmButtonText.setText('Choose 1 ruin');
         }
         this.drawSelection();
         this.tweens.add({
@@ -551,10 +565,15 @@ export class GameScene extends Phaser.Scene {
     // 破滅追加時の処理
     private resolveAcquiredRuin(ruin: { symbol: string }): void {
         let spec = RUIN_SPEC[ruin.symbol];
-        for (let [key, value] of Object.entries(spec.meta1)) {
-            this.inventory[key] = (this.inventory[key] ?? 0) - value;
+        if (spec.type == 'SPEND') {
+            for (let [key, value] of Object.entries(spec.cost)) {
+                this.inventory[key] = (this.inventory[key] ?? 0) - value;
+            }
+        } else if (spec.type == 'PLACE') {
+            this.placeUnitsInRandom(spec.cost);
+            this.drawMap();
         }
-        for (let [key, value] of Object.entries(spec.meta2)) {
+        for (let [key, value] of Object.entries(spec.meta1)) {
             this.inventory[key] = (this.inventory[key] ?? 0) + value;
         }
         if (this.inventory['🧡'] <= 0) {
@@ -562,6 +581,30 @@ export class GameScene extends Phaser.Scene {
             this.startGameover();
         }
         this.drawStatus();
+    }
+    // 破滅・アイテムでのユニット追加メソッド(配置はランダム)
+    private placeUnitsInRandom(units: Record<string, number>): void {
+        let emptyPlace = [];
+        for (let y = 0; y < MAP_HEIGHT; y++) {
+            for (let x = 0; x < MAP_WIDTH; x++) {
+                if (!this.unitMap[y][x]) {
+                    emptyPlace.push([x, y]);
+                }
+            }
+        }
+        emptyPlace.sort(() => 0.5 - Math.random()); // sort は破壊的
+        for (let [symbol, number] of Object.entries(units)) {
+            for (let i = 0; i < number; ++i) {
+                if (emptyPlace.length == 0) {
+                    return;
+                }
+                let [x, y] = emptyPlace.shift();
+                this.unitMap[y][x] = { symbol: symbol, baseTick: this.tick, x: x, y: y };
+                this.textMap[y][x].setText(symbol);
+                this.units.push(this.unitMap[y][x]);
+                this.resolveAcquiredUnit(this.unitMap[y][x]);
+            }
+        }
     }
     // 右上のポーズクリック
     private clickPause(): void {
@@ -598,7 +641,7 @@ export class GameScene extends Phaser.Scene {
         this.drawChoice();
     }
     // 配置ボタン押下→ユニットの作成処理
-    private clickConfirm(): void {
+    private clickConfirmButton(): void {
         if (!this.checkPurchasable()) {
             return;
         }
@@ -629,7 +672,7 @@ export class GameScene extends Phaser.Scene {
         this.drawSelection();
     }
     // アイテム選択画面を完了→アイテム追加・ユニット交換処理
-    private clickSelectionConfirm(): void {
+    private clickSelectionConfirmButton(): void {
         if (this.selectionType == 'ITEM') {
             if (this.selection == -1) {
                 return;
@@ -675,7 +718,7 @@ export class GameScene extends Phaser.Scene {
             this.selectionTexts[i].setPosition(1000, 1000).setText(' ');
             this.selectionContainers[i].setPosition(1000, 1000);
         }
-        this.selectionConfirmContainer.setPosition(1000, 1000);
+        this.selectionConfirmButtonContainer.setPosition(1000, 1000);
         this.tweens.add({
             targets: this.selectionGroup.getChildren(),
             duration: 250,
@@ -741,9 +784,11 @@ export class GameScene extends Phaser.Scene {
         let symbol = this.selections[this.selection];
         let spec = RUIN_SPEC[symbol];
         // インベントリに必要コストがあるか確認
-        for (let [key, value] of Object.entries(spec.meta1)) {
-            if ((this.inventory[key] ?? 0) < value) {
-                return false;
+        if (spec.type == "SPEND") {
+            for (let [key, value] of Object.entries(spec.cost)) {
+                if ((this.inventory[key] ?? 0) < value) {
+                    return false;
+                }
             }
         }
         return true;
@@ -762,9 +807,9 @@ export class GameScene extends Phaser.Scene {
     // 配置ボタンの有効無効を判定
     private drawConfirmButton(): void {
         let confirmOK = this.checkPurchasable();
-        this.confirmText.setFill(confirmOK ? '#ff0' : '#999');
-        this.confirmGraphics.lineStyle(1, confirmOK ? 0xffff00 : 0x909090);
-        this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
+        this.confirmButtonText.setFill(confirmOK ? '#ff0' : '#999');
+        this.confirmButtonGraphics.lineStyle(1, confirmOK ? 0xffff00 : 0x909090);
+        this.confirmButtonGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
     }
     // マップを描画する
     private drawMap() {
@@ -860,8 +905,8 @@ export class GameScene extends Phaser.Scene {
     }
     private getTextFromRuinSpec(symbol: string): string {
         let spec = RUIN_SPEC[symbol];
-        let textLength = Math.ceil(CHOICE_WIDTH * 1.5 / CHOICE_FONT_SIZE);
-        return symbol + ': ' + spec.name + '\n' + this.getSimpleTextFromObject(spec.meta1) + ' -> ' + this.getSimpleTextFromObject(spec.meta2);
+        let prefix = { 'SPEND': 'Remove ', 'PLACE': "Get " };
+        return symbol + ': ' + spec.name + '\n' + prefix[spec.type] + this.getSimpleTextFromObject(spec.cost) + ' -> ' + this.getSimpleTextFromObject(spec.meta1);
     }
     // 左側の選択肢を描画
     private drawChoice() {
@@ -937,8 +982,8 @@ export class GameScene extends Phaser.Scene {
         } else if (this.selectionType == 'RUIN') {
             isColored = (this.selection != -1) && this.checkRuinable();
         }
-        this.selectionConfirmText.setFill(isColored ? '#ff0' : '#999');
-        this.selectionConfirmContainer.setPosition(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2);
+        this.selectionConfirmButtonText.setFill(isColored ? '#ff0' : '#999');
+        this.selectionConfirmButtonContainer.setPosition(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2);
         this.selectionGraphics.lineStyle(1, isColored ? 0xffff00 : 0x909090);
         this.selectionGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
     }
