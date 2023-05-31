@@ -106,17 +106,17 @@ export class GameScene extends Phaser.Scene {
         baseTick: number,
         x: number,
         y: number
-    }[][];
+    }[][] = [];
     private units: {
         symbol: string,
         baseTick: number,
         x: number,
         y: number
     }[] = [];
-    private textMap: Phaser.GameObjects.Text[][]; // 表示用テキストマップデータ
-    private textTweenMap: Phaser.Tweens.Tween[][]; // 表示用テキストアニメマップデータ
-    private terrainMap: Record<TerrainType, number>[][];
-    private adjacentMap: Record<string, number>[][];
+    private textMap: Phaser.GameObjects.Text[][] = []; // 表示用テキストマップデータ
+    private textTweenMap: Phaser.Tweens.Tween[][] = []; // 表示用テキストアニメマップデータ
+    private terrainMap: Record<TerrainType, number>[][] = [];
+    private adjacentMap: Record<string, number>[][] = [];
     private mapGraphics: Phaser.GameObjects.Graphics;
     private mapX: number = -1;
     private mapY: number = -1;
@@ -136,8 +136,8 @@ export class GameScene extends Phaser.Scene {
     private selectionGroup: Phaser.GameObjects.Group;
     private selectionGraphics: Phaser.GameObjects.Graphics;
     private selectionTexts: Phaser.GameObjects.Text[] = [];
-    private selectionConfirmText: Phaser.GameObjects.Text;
     private selectionContainers: Phaser.GameObjects.Container[] = [];
+    private selectionConfirmText: Phaser.GameObjects.Text;
     private selectionConfirmContainer: Phaser.GameObjects.Container;
     private selectionType: SelectionType = 'NONE';
     private selections: string[] = []; // 選択するための選択肢
@@ -151,11 +151,10 @@ export class GameScene extends Phaser.Scene {
     private pauseTween: Phaser.Tweens.Tween;
     private confirmText: Phaser.GameObjects.Text;
     private confirmGraphics: Phaser.GameObjects.Graphics;
-    private confirmOK: boolean = false;
     private victoryOK: boolean = false;
     private gameoverOK: boolean = false;
     private tick: number = 0;
-    private inventory: Record<string, number> = { "💰": 200, '🧡': 3, '💾': 10 };
+    private inventory: Record<string, number> = { "💰": 200, '🧡': 10, '💾': 10 };
     private timerState: TimerState = '▶️';
 
     constructor() {
@@ -179,8 +178,6 @@ export class GameScene extends Phaser.Scene {
         // 配置ボタンの初期化
         this.confirmText = this.add.text(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2, "Purchase and place it there").setFontSize(20).setFill('#999').setOrigin(0.5);
         this.confirmGraphics = this.add.graphics();
-        this.confirmGraphics.lineStyle(1, 0x909090);
-        this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
         let confirmContainer = this.add.container(this.cameras.main.centerX, SCREEN_HEIGHT - MAP_OFFSET_Y / 2).setSize(400, 40);
         confirmContainer.setInteractive({ useHandCursor: true });
         confirmContainer.on('pointerdown', () => {
@@ -207,6 +204,7 @@ export class GameScene extends Phaser.Scene {
         this.createSelection();
         // 各種描画
         this.drawStatus();
+        this.drawConfirmButton();
         this.drawPause();
         this.drawMap();
         this.drawChoice();
@@ -238,7 +236,6 @@ export class GameScene extends Phaser.Scene {
     }
     private createMap(): void {
         // ユニットマップを初期化する
-        this.unitMap = [];
         for (let y = 0; y < MAP_HEIGHT; y++) {
             this.unitMap.push([]);
             for (let x = 0; x < MAP_WIDTH; x++) {
@@ -246,7 +243,6 @@ export class GameScene extends Phaser.Scene {
             }
         }
         // 近隣情報マップを初期化する
-        this.adjacentMap = [];
         for (let y = 0; y < MAP_HEIGHT; y++) {
             this.adjacentMap.push([]);
             for (let x = 0; x < MAP_WIDTH; x++) {
@@ -254,7 +250,6 @@ export class GameScene extends Phaser.Scene {
             }
         }
         // 地形マップを初期化する
-        this.terrainMap = [];
         for (let y = 0; y < MAP_HEIGHT; y++) {
             this.terrainMap.push([]);
             for (let x = 0; x < MAP_WIDTH; x++) {
@@ -264,15 +259,12 @@ export class GameScene extends Phaser.Scene {
         }
         // 地形・枠線描画用オブジェクトを作成する(背景のため、テキストマップより先に描画)
         this.mapGraphics = this.add.graphics();
-        let mapContainer = this.add.container(this.cameras.main.centerX, this.cameras.main.centerY);
-        mapContainer.setSize(MAP_WIDTH * CELL_SIZE, MAP_HEIGHT * CELL_SIZE);
+        let mapContainer = this.add.container(this.cameras.main.centerX, this.cameras.main.centerY).setSize(MAP_WIDTH * CELL_SIZE, MAP_HEIGHT * CELL_SIZE);
         mapContainer.setInteractive({ useHandCursor: true });
         mapContainer.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
             this.clickMap(pointer);
         });
         // テキストマップ、アニメマップを初期化する
-        this.textMap = [];
-        this.textTweenMap = [];
         for (let y = 0; y < MAP_HEIGHT; y++) {
             this.textMap.push([]);
             this.textTweenMap.push([]);
@@ -410,7 +402,7 @@ export class GameScene extends Phaser.Scene {
         this.resolveUnits();
         this.resolveItems();
         this.drawStatus(); // 資源の増減があるので描画
-        this.checkAndEnableConfirmButton(); // 資源の増減で購入可能が変化するので描画
+        this.drawConfirmButton(); // 資源の増減で購入可能が変化するので描画
         this.drawView(); // tick の変更を更新するので描画
         if (this.victoryOK) {
             this.timerState = '▶️';
@@ -596,26 +588,18 @@ export class GameScene extends Phaser.Scene {
             this.mapX = mapX;
             this.mapY = mapY;
         }
-        this.viewItem = -1; // マップをクリックしたらアイテムも未選択にする
-        this.checkAndEnableConfirmButton();
+        this.drawConfirmButton();
         this.drawMap();
     }
     // 左側選択肢をクリック
     private clickChoice(choice: number): void {
         this.choice = (this.choice == choice ? -1 : choice);
-        this.checkAndEnableConfirmButton();
+        this.drawConfirmButton();
         this.drawChoice();
-    }
-    // 配置ボタンの有効無効を判定
-    private checkAndEnableConfirmButton(): void {
-        this.confirmOK = (this.choice != -1 && 0 <= this.mapX && 0 <= this.mapY && !this.unitMap[this.mapY][this.mapX] && this.checkPurchasable());
-        this.confirmText.setFill(this.confirmOK ? '#ff0' : '#999');
-        this.confirmGraphics.lineStyle(1, this.confirmOK ? 0xffff00 : 0x909090);
-        this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
     }
     // 配置ボタン押下→ユニットの作成処理
     private clickConfirm(): void {
-        if (!this.confirmOK) {
+        if (!this.checkPurchasable()) {
             return;
         }
         let symbol = this.choices[this.choice];
@@ -627,7 +611,7 @@ export class GameScene extends Phaser.Scene {
         this.textMap[this.mapY][this.mapX].setText(symbol);
         this.units.push(this.unitMap[this.mapY][this.mapX]);
         this.resolveAcquiredUnit(this.unitMap[this.mapY][this.mapX]);
-        this.checkAndEnableConfirmButton();
+        this.drawConfirmButton();
         this.drawStatus();
         this.drawMap();
     }
@@ -726,6 +710,9 @@ export class GameScene extends Phaser.Scene {
     }
     // 購入可能か判定
     private checkPurchasable(): boolean {
+        if (this.choice == -1 || this.mapX < 0 || this.mapY < 0 || this.unitMap[this.mapY][this.mapX]) {
+            return false;
+        }
         let symbol = this.choices[this.choice];
         let spec = UNIT_SPEC[symbol];
         // インベントリに必要コストがあるか確認
@@ -771,6 +758,13 @@ export class GameScene extends Phaser.Scene {
         if (this.timerState == '▶️') {
             this.pauseTween.resume();
         }
+    }
+    // 配置ボタンの有効無効を判定
+    private drawConfirmButton(): void {
+        let confirmOK = this.checkPurchasable();
+        this.confirmText.setFill(confirmOK ? '#ff0' : '#999');
+        this.confirmGraphics.lineStyle(1, confirmOK ? 0xffff00 : 0x909090);
+        this.confirmGraphics.strokeRect(this.cameras.main.centerX - 200, SCREEN_HEIGHT - MAP_OFFSET_Y / 2 - 20, 400, 40);
     }
     // マップを描画する
     private drawMap() {
