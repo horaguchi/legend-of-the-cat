@@ -62,13 +62,13 @@ const UNIT_SPEC: Record<string, {
     '🕯️': { tier: 1, name: "Power Tower", cost: { '💰': 50 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10 } },
     '💡': { tier: 2, name: "Power Tower", cost: { '💰': 200 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20 } },
     '🪩': { tier: 3, name: "Power Tower", cost: { '💰': 800 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 30 } },
-    '👍': { tier: 1, name: "Happy Tower", cost: { '💰': 100 }, require: { "Cat": 1 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 10, '⏱': 10 } },
-    '👏': { tier: 2, name: "Happy Tower", cost: { '💰': 400 }, require: { "Cat": 2 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 20, '⏱': 20 } },
-    '🫶': { tier: 3, name: "Happy Tower", cost: { '💰': 900 }, require: { "Cat": 3 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 30, '⏱': 30 } },
+    '👍': { tier: 1, name: "Happy Tower", cost: { '💰': 100 }, require: { "Cat": 1 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 5, '⏱': 5 } },
+    '👏': { tier: 2, name: "Happy Tower", cost: { '💰': 400 }, require: { "Cat": 2 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 15, '⏱': 15 } },
+    '🫶': { tier: 3, name: "Happy Tower", cost: { '💰': 900 }, require: { "Cat": 3 }, type: 'TERRAIN', meta1: { '⟳': 1 }, meta2: { '💪': 25, '⏱': 25 } },
     // Special (placed by item)
     "🕳️": { tier: 0, name: "Hole", cost: {}, type: "GAIN", meta1: { "🪨": 1 }, tick: 10 },
     "🦂": { tier: 0, name: "Scorpion", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '⏱': -30 } },
-    '🐈‍⬛': { tier: 0, name: "Black Cat", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '💪': 50, '⏱': 50 } },
+    '🐈‍⬛': { tier: 0, name: "Black Cat", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '💪': 30, '⏱': 30 } },
 } as const;
 // アイテムデータ
 const ITEM_SPEC: Record<string, {
@@ -375,12 +375,17 @@ export class GameScene extends Phaser.Scene {
         this.selectionType = type;
         if (type == 'ITEM') {
             let itemNumber = Math.min((this.inventory['💾'] ?? 0) + 3, 9);
-            this.selections = Object.keys(ITEM_SPEC).sort(() => 0.5 - Math.random()).slice(0, itemNumber);
+            this.selections = Object.keys(ITEM_SPEC).filter((symbol) =>
+                !this.items.some((item) => item.symbol == symbol)
+            ).sort(() => 0.5 - Math.random()).slice(0, itemNumber);
             this.selection = -1;
             this.selectionConfirmButtonText.setText('Choose 1 item');
         } else if (type == 'UNIT') {
             let unitNumber = Math.min((this.inventory['📃'] ?? 0) + 4, 9);
-            this.selections = Object.keys(UNIT_SPEC).sort(() => 0.5 - Math.random()).slice(0, unitNumber);
+            this.selections = Object.keys(UNIT_SPEC).filter((symbol) => {
+                let tier = UNIT_SPEC[symbol].tier;
+                return tier == 1 || (250 <= this.tick && tier == 2) || (500 <= this.tick && tier == 3);
+            }).sort(() => 0.5 - Math.random()).slice(0, unitNumber);
             this.selectionConfirmButtonText.setText('Choose 3 units');
             this.multiSelection = {};
         } else if (type == 'RUIN') {
