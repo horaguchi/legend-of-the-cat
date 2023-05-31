@@ -192,7 +192,7 @@ export class GameScene extends Phaser.Scene {
             textY += CHOICE_HEIGHT + CHOICE_SPACE;
         }
         // タイマーイベントを設定する
-        const timer = this.time.addEvent({
+        let timer = this.time.addEvent({
             delay: 500, // 1秒ごとに更新
             callback: this.updateTimer, // タイマーを更新するコールバック関数
             callbackScope: this,
@@ -574,9 +574,9 @@ export class GameScene extends Phaser.Scene {
     // マップをクリック
     private clickMap(pointer: Phaser.Input.Pointer): void {
         // 現在のマウス位置から、クリックしたマスを計算
-        const currentPosition = new Phaser.Math.Vector2(pointer.x, pointer.y);
-        const mapX = Math.floor((currentPosition.x - MAP_OFFSET_X) / CELL_SIZE);
-        const mapY = Math.floor((currentPosition.y - MAP_OFFSET_Y) / CELL_SIZE);
+        let currentPosition = new Phaser.Math.Vector2(pointer.x, pointer.y);
+        let mapX = Math.floor((currentPosition.x - MAP_OFFSET_X) / CELL_SIZE);
+        let mapY = Math.floor((currentPosition.y - MAP_OFFSET_Y) / CELL_SIZE);
         if (mapX < 0 || MAP_WIDTH <= mapX || mapY < 0 || MAP_HEIGHT <= mapY) {
             return; // 範囲外クリック
         }
@@ -854,7 +854,7 @@ export class GameScene extends Phaser.Scene {
     }
     private getTextFromItemSpec(symbol: string): string {
         let spec = ITEM_SPEC[symbol];
-        let textLength = Math.ceil(CHOICE_WIDTH * 1.5 / CHOICE_FONT_SIZE);
+        let textLength = Math.ceil(CHOICE_WIDTH * 1.6 / CHOICE_FONT_SIZE);
         let desc = spec.desc.match(new RegExp(`.{1,${textLength}}`, 'g')).join('\n');
         return symbol + ': ' + spec.name + '\n' + desc;
     }
