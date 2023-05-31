@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 // 型群
 type UnitType = "GAIN" | "CONVERT" | "TERRAIN";
-type ItemType = "INSTANT" | "VICTORY";
+type ItemType = "INSTANT" | "VICTORY" | "DEPLOY";
 type TerrainType = "💪" | "⏱";
 type RuinType = "SPEND" | "PLACE";
 type SelectionType = 'NONE' | "ITEM" | "UNIT" | 'RUIN';
@@ -68,6 +68,7 @@ const UNIT_SPEC: Record<string, {
     // Special (placed by item)
     "🕳️": { tier: 0, name: "Hole", cost: {}, type: "GAIN", meta1: { "🪨": 1 }, tick: 10 },
     "🦂": { tier: 0, name: "Scorpion", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '⏱': -30 } },
+    '🐈‍⬛': { tier: 0, name: "Black Cat", cost: {}, type: "TERRAIN", meta1: { '⟳': 1 }, meta2: { '💪': 50, '⏱': 50 } },
 } as const;
 // アイテムデータ
 const ITEM_SPEC: Record<string, {
@@ -77,6 +78,7 @@ const ITEM_SPEC: Record<string, {
     meta1: Record<string, number>,
     meta2?: Record<string, number>,
 }> = {
+    '🐈‍⬛': { name: 'Black Cat', desc: 'Place 1🐈‍⬛ in random.', type: "DEPLOY", meta1: { '🐈‍⬛': 1 } },
     '📦️': { name: 'Product Import', desc: 'Import factory products {100🛢️,100⚙️,100🧰}.', type: "INSTANT", meta1: { '🛢️': 100, '⚙️': 100, '🧰': 100 } },
     '👓': { name: 'Glasses', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
     '👔': { name: 'Necktie', desc: 'Get 1👨‍💼, each requires one less (Min 1).', type: "INSTANT", meta1: { '👨‍💼': 1 } },
@@ -560,6 +562,9 @@ export class GameScene extends Phaser.Scene {
             }
             this.drawStatus();
             this.drawChoice();
+        } else if (spec.type == "DEPLOY") {
+            this.placeUnitsInRandom(spec.meta1);
+            this.drawMap();
         }
     }
     // 破滅追加時の処理
